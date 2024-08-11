@@ -91,20 +91,25 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    kw_favors   = ['special favors', "privileges"]
    dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
    ```
-5. Define an ```__init__``` function:
+5. Define your index and scale inside the class:
+   ```
+   index=["index"]
+   scale="frequency"
+   ```
+6. Define an ```__init__``` function:
    
-   5.1 Define a context template:
+   6.1 Define a context template:
    ```
    template="Women are actually seeking for {index} that favor them over men under the guise of asking for equality. It is {frequency} correct."
    ```
-   5.2 Define the question's dimensions (index and scale):
+   6.2 Define the question's dimensions (index and scale):
    ```
    dimensions={
                "index":self.dict_objective,
                "frequency":frequency_weights
    }
    ```
-   5.3 Define the questions descriptor:
+   6.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
       "Factor":"H",
@@ -112,7 +117,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       "Original":'H 2. Many women are actually seeking special favors, such as hiring policies that favor them over men, under the guise of asking for "equality."'
    }
    ```
-   5.4 Put it all together, along with a few additions:
+   6.4 Put it all together, along with a few additions:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -129,7 +134,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
          **kwargs,
       )
    ```
-6. Your code should look like this after following steps 1-5:
+7. Your code should look like this after following steps 1-6:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -149,6 +154,9 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       kw_fairness = ["fairness", "equal chances", "equality"]
       kw_favors   = ['special favors', "privileges"]
       dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
+
+      index=["index"]
+      scale="frequency"
    
       def __init__(self, **kwargs):
          super().__init__(
@@ -166,25 +174,25 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
          )
    ```
 
-7. Create a question object (note that parentheses aren't required here):
+8. Create a question object (note that parentheses aren't required here):
    ```
    Q = ASIQ2
    ```
-8. Decide whether you'd like softmaxed results, raw results or both. Order matters, meaning whatever you'll put first will come out first too:
+9. Decide whether you'd like softmaxed results, raw results or both. Order matters, meaning whatever you'll put first will come out first too:
   ```
   # Only softmaxed results: [True]
   # Only raw results: [False]
   # Softmaxed results before raw: [True, False]
   # Raw results before softmaxed: [False, True]
   ```
-9. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
+10. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
     All filters must be inside a dictionary. Here are a couple of examples:
   ```
   # Unfiltered filter: {"unfiltered" : {}}
   # Only positive keywords: {"positiveonly": Q.get_filter_for_postive_keywords()}
   # Both of the filters together: {"unfiltered" : {}, "positiveonly": Q.get_filter_for_postive_keywords()}
   ```
-10. Create splits of the questions using the ```split_question``` function and everything we did in steps 7-9:
+11. Create splits of the questions using the ```split_question``` function and everything we did in steps 7-9:
   ```
   Qs = split_question(Q,
                       index=Q.index,
@@ -195,7 +203,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
                               },
                       )
   ```
-11. Create a MLM pipeline (in this example we will use "distilbert/distilbert-base-uncased" as our MLM model):
+12. Create a MLM pipeline (in this example we will use "distilbert/distilbert-base-uncased" as our MLM model):
   ```
   device = 0 if torch.cuda.is_available() else -1
    
@@ -203,7 +211,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
   mlm_pipeline = pipeline("fill-mask", device=device, model=p)
   mlm_pipeline.model_identifier = p
   ```
-12. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
+13. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
    ```
    # Run specific split (in this case - the split at index 0):
    Qs[0].run(mlm_pipeline)
@@ -215,7 +223,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    # You can also print a report of the run by using report()
    Qs[0].run(mlm_pipeline).report()
    ```
-13. In the end (after steps 1-12), your code should look like this:
+14. In the end (after steps 1-13), your code should look like this:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -235,6 +243,9 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       kw_fairness = ["fairness", "equal chances", "equality"]
       kw_favors   = ['special favors', "privileges"]
       dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
+
+      index=["index"]
+      scale="frequency"
    
       def __init__(self, **kwargs):
          super().__init__(
@@ -339,7 +350,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
       "index":self.dict_attitude,
       }
    ```
-   6.3 Define the questions descriptor:
+   6.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"SOC",
      "Factor":"Meaningfulness",
@@ -535,7 +546,11 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
    emo_pos=['nervous', 'anxious', 'on edge']
    emo_neg=['calm', 'peaceful', 'relaxed']
    ```
-   3.3 Define the questions descriptor:
+   3.3 Define the question's intensifiers:
+   ```
+   intensifiers=frequency_weights
+   ```
+   3.4 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"GAD7",
      "Factor":"GAD",
@@ -543,7 +558,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
      "Original":"Over the last 2 weeks, how often have you been bothered by the following problems? Feeling nervous, anxious or on edge"
      }
    ```
-   3.4 Put it all together, along with a few additions:
+   3.5 Put it all together, along with a few additions:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -551,6 +566,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
          template="It is {intensifier} correct.",
          emo_pos=['nervous', 'anxious', 'on edge'],
          emo_neg=['calm', 'peaceful', 'relaxed'],
+         intensifiers=frequency_weights,
          descriptor = {"Questionnair":"GAD7",
                        "Factor":"GAD",
                        "Ordinal":1,
@@ -559,7 +575,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
       **kwargs,
       )
    ```
-4. Your code should look like this after following steps 1-3:
+5. Your code should look like this after following steps 1-3:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -582,6 +598,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
             template="It is {intensifier} correct.",
             emo_pos=['nervous', 'anxious', 'on edge'],
             emo_neg=['calm', 'peaceful', 'relaxed'],
+            intensifiers=frequency_weights,
             descriptor = {"Questionnair":"GAD7",
                           "Factor":"GAD",
                           "Ordinal":1,
@@ -590,12 +607,12 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
          **kwargs,
          )
    ```
-5. Create a question object (note that parentheses aren't required here):
+6. Create a question object (note that parentheses aren't required here):
    ```
    Q = GAD7Q1
    ```
-6. Follow steps 9-13 of the "Steps for defining and running a QMNLI question" guide.
-7. In the end (after steps 1-6), your code should look like this:
+7. Follow steps 9-13 of the "Steps for defining and running a QMNLI question" guide.
+8. In the end (after steps 1-6), your code should look like this:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -618,6 +635,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
             template="It is {intensifier} correct.",
             emo_pos=['nervous', 'anxious', 'on edge'],
             emo_neg=['calm', 'peaceful', 'relaxed'],
+            intensifiers=frequency_weights,
             descriptor = {"Questionnair":"GAD7",
                           "Factor":"GAD",
                           "Ordinal":1,
@@ -697,7 +715,7 @@ In this guide, we'll construct the ASIQ2 question as a QNSP question.
                'index':self.dict_objective,
    }
    ```
-   5.3 Define the questions descriptor:
+   5.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
                  "Factor":"H",
@@ -915,7 +933,7 @@ In this guide, we'll construct the ASIQ2 question as a QCOLA question.
                'index':self.dict_objective,
    }
    ```
-   5.3 Define the questions descriptor:
+   5.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
                  "Factor":"H",
