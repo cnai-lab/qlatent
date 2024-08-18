@@ -113,7 +113,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       "Original":'H 2. Many women are actually seeking special favors, such as hiring policies that favor them over men, under the guise of asking for "equality."'
    }
    ```
-   6.4 Put it all together, along with keywords arguments and use of the QMLM's ```__init___``` function:
+   6.4 Put it all together, along with keyword arguments and use of the QMLM's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -324,7 +324,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    scale="frequency"
    ```
 5. Define a dictionary (inside the class) of words that make the question's score positive and words that make it negative.<br>
-   Make sure that there are at least 2 "positive words" and at least 2 "negative words":
+   Make sure that there are at least 2 words with a positive value on the score and at least 2 with a negative value:
    ```
    kw_attitude_neg = ["meaningless", "dull", "aimless", 'boring']
    kw_attitude_pos = ["meaningful", "interesting", "fulfilling", 'fascinating']
@@ -352,7 +352,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
      "Original":"Do you have the feeling that you don’t really care what goes on around you? "
      }
    ```
-   6.4 Put it all together, along with a few additions:
+   6.4 Put it all together, along with keyword arguments and use of the QMNLI's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
      super().__init__(
@@ -370,7 +370,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
        **kwargs,
      )
    ```
-7. Your code should look like this after following steps 1-6:
+7. Here is how our code looks like after steps 1-6:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -414,14 +414,14 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    ```
    Q = SOCQ4
    ```
-9. Decide whether you'd like softmaxed results, raw rwsults or both. Order matters, meaning whatever you'll put first will come out first too:
+9. Decide whether you'd like softmaxed results, raw results or both. The input-output order relationship is FIFO (first in first out):
   ```
   # Only softmaxed results: [True]
   # Only raw results: [False]
   # Softmaxed results before raw: [True, False]
   # Raw results before softmaxed: [False, True]
   ```
-10. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
+10. Decide on filters you'd like to use. You can use more than one filter. The input-output order relationship is FIFO.<br>
     All filters must be inside a dictionary. Here are a couple of examples:
   ```
   # Unfiltered filter: {"unfiltered" : {}}
@@ -447,7 +447,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
   nli_pipeline = pipeline("zero-shot-classification",device=device, model=p)
   nli_pipeline.model_identifier = p
   ```
-13. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
+13. Run the question on the split you want to inspect. If you would like to inspect more than one split, you will have to run each split individually:
    ```
    # Run specific split (in this case - the split at index 0):
    Qs[0].run(nli_pipeline)
@@ -459,7 +459,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    # You can also print a report of the run by using report()
    Qs[0].run(nli_pipeline).report()
    ```
-14. In the end (after steps 1-13), your code should look like this:
+14. Finally, after steps 1-13, our code looks like this:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -523,7 +523,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
 
 In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
 
-1. Follow steps 1 and 2 of the "Steps for Defining and Running a QMNLI Question" guide.
+1. Follow steps 1-2 of the "Steps for Defining and Running a QMNLI Question" guide.
 2. Define a class for your question:
    ```
    class GAD7Q1(_QMNLI):
@@ -535,7 +535,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
    context="Over the last 2 weeks, I feel {emotion}."
    template="It is {intensifier} correct."
    ```
-   3.2 Define 2 lists: a list of emotions with a positive influence on the question's score, and another list of emotions who do the opposite thing:
+   3.2 Define 2 lists: a list of emotions that provide positive scores, and another list of emotions that provide negative scores:
    ```
    emo_pos=['nervous', 'anxious', 'on edge']
    emo_neg=['calm', 'peaceful', 'relaxed']
@@ -552,7 +552,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
      "Original":"Over the last 2 weeks, how often have you been bothered by the following problems? Feeling nervous, anxious or on edge"
      }
    ```
-   3.5 Put it all together, along with a few additions:
+   3.5 Put it all together, along with keyword arguments and use of the _QMNLI's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -569,7 +569,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
       **kwargs,
       )
    ```
-5. Your code should look like this after following steps 1-3:
+4. Here is how our code looks like after steps 1-3:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -601,12 +601,12 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
          **kwargs,
          )
    ```
-6. Create a question object (note that parentheses aren't required here):
+5. Create a question object (note that parentheses aren't required here):
    ```
    Q = GAD7Q1
    ```
-7. Follow steps 9-13 of the "Steps for defining and running a QMNLI question" guide.
-8. In the end (after steps 1-6), your code should look like this:
+6. Follow steps 9-13 of the "Steps for defining and running a QMNLI question" guide.
+7. Finally, after steps 1-6, our code looks like this:
    ```
    from qlatent.qmnli.qmnli import *
 
