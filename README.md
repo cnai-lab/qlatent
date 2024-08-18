@@ -287,9 +287,9 @@ The NLI task assigns 3 labels: entailment, neutral, and contradiction, to descri
 - Neutral: The 1st and 2nd sentences are neither entailed nor contradicted by one another.
 - Contradiction: The 2nd sentence contradicts the 1st sentence.
 
-In our package, we use the MNLI task to evaluate the relative probability of a label to represent a relationship between 2 sentences. The higher the score a label receives, the higher the probability that it correctly represents the relationship. Conversely, a lower score indicates a lower probability.
-
 MNLI refers to the NLI task performed on sentences from numerous distinct genres, such as movie reviews, text messages, political statements, etc.
+
+In our package, we use the MNLI task to evaluate the relative probability of a label to represent a relationship between 2 sentences. The higher the score a label receives, the higher the probability that it correctly represents the relationship. Conversely, a lower score indicates a lower probability.
 
 **IMPORTANT NOTE**: There are 2 types of MNLI questions in this package: QMNLI and _QMNLI.
 
