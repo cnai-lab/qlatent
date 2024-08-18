@@ -44,20 +44,16 @@ The "qlatent" package supports the following types of NLP tasks:
 - NSP
 - CoLA
 
-Descriptions of the available NLP tasks are provided below. Steps and examples of how to implement every task are also provided along with each task description.
+Descriptions of the available NLP tasks are provided below, along with steps and examples of how to implement them.
 
-**IMPORTANT NOTE**: Results of questions are displayed using filters and softmaxed/raw scores.<br>
-Question variations are first split according to the softmax arguments, and then within each group the softmax arguments created - according to the filters.
+**IMPORTANT NOTE**: Results of items are displayed after using softmax or no softmax and filters.<br>
+Item variations are first split into 1 or 2 groups according to the softmax arguments, and then within each group, the splits are created according to the filters.
 
 ## MLM - Masked Language Modeling
 
-The task of masked language modeling is to predict which tokens (characters, words, etc.) can replace masked tokens in a sentence (or even in numerous sentences).<br>
-The model can understand the connections between revealed and masked tokens in the sentence both by reading the sentence normally and reading it backwards too.<br>
-Using reading in both ways, the model can gather a better contextual undersanding of the sentence and better predict the masked token(s).
+A masked language model (MLM) is a type of model commonly used in NLP. Given a text with some tokens masked (i.e., missing), the MLM predicts the probabilities of various tokens filling these masked positions, based on the corpus it was trained on.
 
-There are 2 common usages to the MLM task:
-1. Selection of a token(s) that best fill masked token(s) in a piece of text.
-2. Checking how good a token is for filling a masked token in a piece of text (this is also available for multiple masked tokens). The higher the score a token gets for filling the masked token - the higher the probability that the token fills the masked token correctly, and vice versa.
+In our package, we use the MLM task to evaluate the relative probability of a token to fill a masked token in a given text. The higher the score a token receives, the higher the probability that it correctly fills the masked token. Conversely, a lower score indicates a lower probability.
 
 ### Steps for Defining and Running a QMLM Question
 
@@ -85,7 +81,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    class ASIQ2(QMLM):
    ```
 4. Define a dictionary (inside the class) of words that make the question's score positive and words that make it negative.<br>
-   Make sure that there are at least 2 "positive words" and at least 2 "negative words":
+   Make sure that there are at least 2 words with a positive value on the score and at least 2 with a negative value:
    ```
    kw_fairness = ["fairness", "equal chances", "equality"]
    kw_favors   = ['special favors', "privileges"]
@@ -117,7 +113,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       "Original":'H 2. Many women are actually seeking special favors, such as hiring policies that favor them over men, under the guise of asking for "equality."'
    }
    ```
-   6.4 Put it all together, along with a few additions:
+   6.4 Put it all together, along with keywords arguments and use of the QMLM's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -134,7 +130,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
          **kwargs,
       )
    ```
-7. Your code should look like this after following steps 1-6:
+7. Here is how our code looks like after steps 1-6:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -178,21 +174,21 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    ```
    Q = ASIQ2
    ```
-9. Decide whether you'd like softmaxed results, raw results or both. Order matters, meaning whatever you'll put first will come out first too:
+9. Decide whether you'd like softmaxed results, raw results or both. The input-output order relationship is FIFO (first in first out):
   ```
   # Only softmaxed results: [True]
   # Only raw results: [False]
   # Softmaxed results before raw: [True, False]
   # Raw results before softmaxed: [False, True]
   ```
-10. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
+10. Decide on filters you'd like to use. You can use more than one filter. The input-output order relationship is FIFO.<br>
     All filters must be inside a dictionary. Here are a couple of examples:
   ```
   # Unfiltered filter: {"unfiltered" : {}}
   # Only positive keywords: {"positiveonly": Q.get_filter_for_postive_keywords()}
   # Both of the filters together: {"unfiltered" : {}, "positiveonly": Q.get_filter_for_postive_keywords()}
   ```
-11. Create splits of the questions using the ```split_question``` function and everything we did in steps 7-9:
+11. Create splits of the questions using the ```split_question``` function and everything we did in steps 8-10:
   ```
   Qs = split_question(Q,
                       index=Q.index,
@@ -203,7 +199,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
                               },
                       )
   ```
-12. Create a MLM pipeline (in this example we will use "distilbert/distilbert-base-uncased" as our MLM model):
+12. Create a MLM pipeline (in this example we used "distilbert/distilbert-base-uncased" as our MLM model):
   ```
   device = 0 if torch.cuda.is_available() else -1
    
@@ -211,7 +207,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
   mlm_pipeline = pipeline("fill-mask", device=device, model=p)
   mlm_pipeline.model_identifier = p
   ```
-13. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
+13. Run the question on the split you want to inspect. If you would like to inspect more than one split, you will have to run each split individually:
    ```
    # Run specific split (in this case - the split at index 0):
    Qs[0].run(mlm_pipeline)
@@ -223,7 +219,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    # You can also print a report of the run by using report()
    Qs[0].run(mlm_pipeline).report()
    ```
-14. In the end (after steps 1-13), your code should look like this:
+14. Finally, after steps 1-13, our code looks like this:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -286,14 +282,12 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
 
 NLI is a text classification NLP task that assigns a label or class to text.
 
-The NLI task uses 3 labels: entailment, neutral and contradiction, to describe the relationship between 2 sentences.
-- Entailment: The 2nd sentence's statement is a product of what the 1st sentence stated.
-- Neutral: The 1st and 2nd sentences' statements are irrelevant to one another.
-- Contradiction: The 2nd sentence's statement opposes whatever the 1st sentence stated.
+The NLI task assigns 3 labels: entailment, neutral, and contradiction, to describe the relationship between 2 sentences.
+- Entailment: The 2nd sentence is entailed by the 1st sentence.
+- Neutral: The 1st and 2nd sentences are neither entailed nor contradicted by one another.
+- Contradiction: The 2nd sentence contradicts the 1st sentence.
 
-There are 2 common usages to the NLI task:
-1. Selection of a label or class that best represent a piece of text out of a variety of labels or classes.
-2. Checking how good a label or a class represent a piece of text. The higher the score the label or class get - the higher the probability that the label or class represent the text correctly, and vice versa.
+In our package, we use the MNLI task to evaluate the relative probability of a label to represent a relationship between 2 sentences. The higher the score a label receives, the higher the probability that it correctly represents the relationship. Conversely, a lower score indicates a lower probability.
 
 MNLI refers to the NLI task performed on sentences from numerous distinct genres, such as movie reviews, text messages, political statements, etc.
 
