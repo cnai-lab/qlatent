@@ -291,7 +291,8 @@ MNLI refers to the NLI task performed on sentences from numerous distinct genres
 
 In our package, we use the MNLI task to evaluate the relative probability of a label to represent a relationship between 2 sentences. The higher the score a label receives, the higher the probability that it correctly represents the relationship. Conversely, a lower score indicates a lower probability.
 
-**IMPORTANT NOTE**: There are 2 types of MNLI questions in this package: QMNLI and _QMNLI.
+**IMPORTANT NOTE**: There are 2 types of MNLI questions in this package: QMNLI and _QMNLI.<br>
+A _QMNLI question is a simplified version of a QMNLI question, using positive and negative emotions as indexes instead of any index.
 
 ### Steps for Defining and Running a QMNLI Question
 
