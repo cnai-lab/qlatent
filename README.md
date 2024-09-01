@@ -282,9 +282,9 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
 
 NLI is a text classification NLP task that assigns a label or class to text.
 
-The NLI task assigns 3 labels: entailment, neutral, and contradiction, to describe the relationship between 2 sentences.
+When given 2 sentences, the NLI task assigns 1 of 3 labels to describe the relationship between them - either entailment, neutral, or contradiction.
 - Entailment: The 2nd sentence is entailed by the 1st sentence.
-- Neutral: The 1st and 2nd sentences are neither entailed nor contradicted by one another.
+- Neutral: The 2nd sentence is neither entailed by the 1st sentence nor contradicts it.
 - Contradiction: The 2nd sentence contradicts the 1st sentence.
 
 MNLI refers to the NLI task performed on sentences from numerous distinct genres, such as movie reviews, text messages, political statements, etc.
@@ -660,8 +660,8 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
 
 ## NSP - Next Sequence Predicion
 
-Given 2 sequences of characters, NSP is an NLP task that checks how good the 2nd sequence is as a follow up for the 1st sequence.<br>
-In the qlatent package's case, the sequences are sentences that represent questions and their corresponding possible answers. The higher the score the 2nd sequence gets - the higher the likelyhood that the 2nd sequence will come after the 1st sequence, and vice versa.
+Given 2 sequences of characters, NSP is an NLP task that checks how good the 2nd sequence is as a follow-up for the 1st sequence.<br>
+In the qlatent package's case, the sequences are sentences that represent questions and their corresponding possible answers. The higher the score the 2nd sequence gets - the higher the likelyhood that the 2nd sequence will come after the 1st sequence. Conversely, a lower score indicates a lower likelyhood for the 2nd sequence to follow the 1st sequence.
 
 ### Steps for Defining and Running a QNSP Question
 
@@ -880,7 +880,7 @@ In this guide, we'll construct the ASIQ2 question as a QNSP question.
 
 ## CoLA - Corpus of Linguistic Acceptability
 
-The CoLA task is an NLP task that checks the grammatical acceptability of English text. The higher the score a text gets - the more grammatically correct the text is, and vice versa.
+The CoLA task is an NLP task that checks the grammatical acceptability of English text. The higher the score a text gets - the more grammatically correct the text is. Conversely, a lower score indicates a more grammatically incorrect text.
 
 ### Steps for Defining and Running a QCOLA Question
 
