@@ -660,7 +660,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
 
 ## NSP - Next Sequence Predicion
 
-Given 2 sequences of characters, NSP is an NLP task that checks how good the 2nd sequence is as a follow-up for the 1st sequence.<br>
+Given 2 sequences of characters, NSP is an NLP task that checks how good the 2nd sequence is as a follow up for the 1st sequence.<br>
 In the qlatent package's case, the sequences are sentences that represent questions and their corresponding possible answers. The higher the score the 2nd sequence gets - the higher the likelyhood that the 2nd sequence will come after the 1st sequence. Conversely, a lower score indicates a lower likelyhood for the 2nd sequence to follow the 1st sequence.
 
 ### Steps for Defining and Running a QNSP Question
