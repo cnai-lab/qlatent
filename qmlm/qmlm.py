@@ -8,6 +8,7 @@ from transformers import PreTrainedModel
 from transformers import PreTrainedTokenizer
 import scipy
 import itertools
+import re
 
 from ..qabstract.qabstract import *
 from ..qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
