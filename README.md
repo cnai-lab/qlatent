@@ -44,20 +44,16 @@ The "qlatent" package supports the following types of NLP tasks:
 - NSP
 - CoLA
 
-Descriptions of the available NLP tasks are provided below. Steps and examples of how to implement every task are also provided along with each task description.
+Descriptions of the available NLP tasks are provided below, along with steps and examples of how to implement them.
 
-**IMPORTANT NOTE**: Results of questions are displayed using filters and softmaxed/raw scores.<br>
-Question variations are first split according to the softmax arguments, and then within each group the softmax arguments created - according to the filters.
+**IMPORTANT NOTE**: Results of items are displayed after using softmax or no softmax and filters.<br>
+Item variations are first split into 1 or 2 groups according to the softmax arguments, and then within each group, the splits are created according to the filters.
 
 ## MLM - Masked Language Modeling
 
-The task of masked language modeling is to predict which tokens (characters, words, etc.) can replace masked tokens in a sentence (or even in numerous sentences).<br>
-The model can understand the connections between revealed and masked tokens in the sentence both by reading the sentence normally and reading it backwards too.<br>
-Using reading in both ways, the model can gather a better contextual undersanding of the sentence and better predict the masked token(s).
+A masked language model (MLM) is a type of model commonly used in NLP. Given a text with some tokens masked (i.e., missing), the MLM predicts the probabilities of various tokens filling these masked positions, based on the corpus it was trained on.
 
-There are 2 common usages to the MLM task:
-1. Selection of a token(s) that best fill masked token(s) in a piece of text.
-2. Checking how good a token is for filling a masked token in a piece of text (this is also available for multiple masked tokens). The higher the score a token gets for filling the masked token - the higher the probability that the token fills the masked token correctly, and vice versa.
+In our package, we use the MLM task to evaluate the relative probability of a token to fill a masked token in a given text. The higher the score a token receives, the higher the probability that it correctly fills the masked token. Conversely, a lower score indicates a lower probability.
 
 ### Steps for Defining and Running a QMLM Question
 
@@ -85,26 +81,31 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    class ASIQ2(QMLM):
    ```
 4. Define a dictionary (inside the class) of words that make the question's score positive and words that make it negative.<br>
-   Make sure that there are at least 2 "positive words" and at least 2 "negative words":
+   Make sure that there are at least 2 words with a positive value on the score and at least 2 with a negative value:
    ```
    kw_fairness = ["fairness", "equal chances", "equality"]
    kw_favors   = ['special favors', "privileges"]
    dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
    ```
-5. Define an ```__init__``` function:
+5. Define your index and scale inside the class:
+   ```
+   index=["index"]
+   scale="frequency"
+   ```
+6. Define an ```__init__``` function:
    
-   5.1 Define a context template:
+   6.1 Define a context template:
    ```
    template="Women are actually seeking for {index} that favor them over men under the guise of asking for equality. It is {frequency} correct."
    ```
-   5.2 Define the question's dimensions (index and scale):
+   6.2 Define the question's dimensions (index and scale):
    ```
    dimensions={
                "index":self.dict_objective,
                "frequency":frequency_weights
    }
    ```
-   5.3 Define the questions descriptor:
+   6.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
       "Factor":"H",
@@ -112,7 +113,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       "Original":'H 2. Many women are actually seeking special favors, such as hiring policies that favor them over men, under the guise of asking for "equality."'
    }
    ```
-   5.4 Put it all together, along with a few additions:
+   6.4 Put it all together, along with keyword arguments and use of the QMLM's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -129,7 +130,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
          **kwargs,
       )
    ```
-6. Your code should look like this after following steps 1-5:
+7. Here is how our code looks like after steps 1-6:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -149,6 +150,9 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       kw_fairness = ["fairness", "equal chances", "equality"]
       kw_favors   = ['special favors', "privileges"]
       dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
+
+      index=["index"]
+      scale="frequency"
    
       def __init__(self, **kwargs):
          super().__init__(
@@ -166,25 +170,25 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
          )
    ```
 
-7. Create a question object (note that parentheses aren't required here):
+8. Create a question object (note that parentheses aren't required here):
    ```
    Q = ASIQ2
    ```
-8. Decide whether you'd like softmaxed results, raw results or both. Order matters, meaning whatever you'll put first will come out first too:
+9. Decide whether you'd like softmaxed results, raw results or both. The input-output order relationship is FIFO (first in first out):
   ```
   # Only softmaxed results: [True]
   # Only raw results: [False]
   # Softmaxed results before raw: [True, False]
   # Raw results before softmaxed: [False, True]
   ```
-9. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
+10. Decide on filters you'd like to use. You can use more than one filter. The input-output order relationship is FIFO.<br>
     All filters must be inside a dictionary. Here are a couple of examples:
   ```
   # Unfiltered filter: {"unfiltered" : {}}
   # Only positive keywords: {"positiveonly": Q.get_filter_for_postive_keywords()}
   # Both of the filters together: {"unfiltered" : {}, "positiveonly": Q.get_filter_for_postive_keywords()}
   ```
-10. Create splits of the questions using the ```split_question``` function and everything we did in steps 7-9:
+11. Create splits of the questions using the ```split_question``` function and everything we did in steps 8-10:
   ```
   Qs = split_question(Q,
                       index=Q.index,
@@ -195,7 +199,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
                               },
                       )
   ```
-11. Create a MLM pipeline (in this example we will use "distilbert/distilbert-base-uncased" as our MLM model):
+12. Create a MLM pipeline (in this example we used "distilbert/distilbert-base-uncased" as our MLM model):
   ```
   device = 0 if torch.cuda.is_available() else -1
    
@@ -203,7 +207,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
   mlm_pipeline = pipeline("fill-mask", device=device, model=p)
   mlm_pipeline.model_identifier = p
   ```
-12. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
+13. Run the question on the split you want to inspect. If you would like to inspect more than one split, you will have to run each split individually:
    ```
    # Run specific split (in this case - the split at index 0):
    Qs[0].run(mlm_pipeline)
@@ -215,7 +219,7 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
    # You can also print a report of the run by using report()
    Qs[0].run(mlm_pipeline).report()
    ```
-13. In the end (after steps 1-12), your code should look like this:
+14. Finally, after steps 1-13, our code looks like this:
    ```
    from qlatent.qmlm.qmlm import *
 
@@ -235,6 +239,9 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
       kw_fairness = ["fairness", "equal chances", "equality"]
       kw_favors   = ['special favors', "privileges"]
       dict_objective = dict_pos_neg(kw_favors, kw_fairness,1)
+
+      index=["index"]
+      scale="frequency"
    
       def __init__(self, **kwargs):
          super().__init__(
@@ -275,18 +282,17 @@ In this guide, we'll construct the ASIQ2 question as a QMLM question.
 
 NLI is a text classification NLP task that assigns a label or class to text.
 
-The NLI task uses 3 labels: entailment, neutral and contradiction, to describe the relationship between 2 sentences.
-- Entailment: The 2nd sentence's statement is a product of what the 1st sentence stated.
-- Neutral: The 1st and 2nd sentences' statements are irrelevant to one another.
-- Contradiction: The 2nd sentence's statement opposes whatever the 1st sentence stated.
-
-There are 2 common usages to the NLI task:
-1. Selection of a label or class that best represent a piece of text out of a variety of labels or classes.
-2. Checking how good a label or a class represent a piece of text. The higher the score the label or class get - the higher the probability that the label or class represent the text correctly, and vice versa.
+When given 2 sentences, the NLI task assigns 1 of 3 labels to describe the relationship between them - either entailment, neutral, or contradiction.
+- Entailment: The 2nd sentence is entailed by the 1st sentence.
+- Neutral: The 2nd sentence is neither entailed by the 1st sentence nor contradicts it.
+- Contradiction: The 2nd sentence contradicts the 1st sentence.
 
 MNLI refers to the NLI task performed on sentences from numerous distinct genres, such as movie reviews, text messages, political statements, etc.
 
-**IMPORTANT NOTE**: There are 2 types of MNLI questions in this package: QMNLI and _QMNLI.
+In our package, we use the MNLI task to evaluate the relative probability of a label to represent a relationship between 2 sentences. The higher the score a label receives, the higher the probability that it correctly represents the relationship. Conversely, a lower score indicates a lower probability.
+
+**IMPORTANT NOTE**: There are 2 types of MNLI questions in this package: QMNLI and _QMNLI.<br>
+A _QMNLI question is a simplified version of a QMNLI question, using positive and negative emotions as indexes instead of any index.
 
 ### Steps for Defining and Running a QMNLI Question
 
@@ -319,7 +325,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    scale="frequency"
    ```
 5. Define a dictionary (inside the class) of words that make the question's score positive and words that make it negative.<br>
-   Make sure that there are at least 2 "positive words" and at least 2 "negative words":
+   Make sure that there are at least 2 words with a positive value on the score and at least 2 with a negative value:
    ```
    kw_attitude_neg = ["meaningless", "dull", "aimless", 'boring']
    kw_attitude_pos = ["meaningful", "interesting", "fulfilling", 'fascinating']
@@ -339,7 +345,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
       "index":self.dict_attitude,
       }
    ```
-   6.3 Define the questions descriptor:
+   6.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"SOC",
      "Factor":"Meaningfulness",
@@ -347,7 +353,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
      "Original":"Do you have the feeling that you don’t really care what goes on around you? "
      }
    ```
-   6.4 Put it all together, along with a few additions:
+   6.4 Put it all together, along with keyword arguments and use of the QMNLI's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
      super().__init__(
@@ -365,7 +371,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
        **kwargs,
      )
    ```
-7. Your code should look like this after following steps 1-6:
+7. Here is how our code looks like after steps 1-6:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -409,14 +415,14 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    ```
    Q = SOCQ4
    ```
-9. Decide whether you'd like softmaxed results, raw rwsults or both. Order matters, meaning whatever you'll put first will come out first too:
+9. Decide whether you'd like softmaxed results, raw results or both. The input-output order relationship is FIFO (first in first out):
   ```
   # Only softmaxed results: [True]
   # Only raw results: [False]
   # Softmaxed results before raw: [True, False]
   # Raw results before softmaxed: [False, True]
   ```
-10. Decide on filters you'd like to use. You can use more than one filter, and filters will be displayed according to the order in which you provided them.
+10. Decide on filters you'd like to use. You can use more than one filter. The input-output order relationship is FIFO.<br>
     All filters must be inside a dictionary. Here are a couple of examples:
   ```
   # Unfiltered filter: {"unfiltered" : {}}
@@ -442,7 +448,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
   nli_pipeline = pipeline("zero-shot-classification",device=device, model=p)
   nli_pipeline.model_identifier = p
   ```
-13. Run the question on the split you'd want to inspect. If you'd like to inspect more than one split, you'll have to run each split individually:
+13. Run the question on the split you want to inspect. If you would like to inspect more than one split, you will have to run each split individually:
    ```
    # Run specific split (in this case - the split at index 0):
    Qs[0].run(nli_pipeline)
@@ -454,7 +460,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
    # You can also print a report of the run by using report()
    Qs[0].run(nli_pipeline).report()
    ```
-14. In the end (after steps 1-13), your code should look like this:
+14. Finally, after steps 1-13, our code looks like this:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -518,7 +524,7 @@ In this guide, we'll construct the SOCQ4 question as a QMNLI question.
 
 In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
 
-1. Follow steps 1 and 2 of the "Steps for Defining and Running a QMNLI Question" guide.
+1. Follow steps 1-2 of the "Steps for Defining and Running a QMNLI Question" guide.
 2. Define a class for your question:
    ```
    class GAD7Q1(_QMNLI):
@@ -530,12 +536,16 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
    context="Over the last 2 weeks, I feel {emotion}."
    template="It is {intensifier} correct."
    ```
-   3.2 Define 2 lists: a list of emotions with a positive influence on the question's score, and another list of emotions who do the opposite thing:
+   3.2 Define 2 lists: a list of emotions that provide positive scores, and another list of emotions that provide negative scores:
    ```
    emo_pos=['nervous', 'anxious', 'on edge']
    emo_neg=['calm', 'peaceful', 'relaxed']
    ```
-   3.3 Define the questions descriptor:
+   3.3 Define the question's intensifiers:
+   ```
+   intensifiers=frequency_weights
+   ```
+   3.4 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"GAD7",
      "Factor":"GAD",
@@ -543,7 +553,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
      "Original":"Over the last 2 weeks, how often have you been bothered by the following problems? Feeling nervous, anxious or on edge"
      }
    ```
-   3.4 Put it all together, along with a few additions:
+   3.5 Put it all together, along with keyword arguments and use of the _QMNLI's ```__init___``` function:
    ```
    def __init__(self, **kwargs):
       super().__init__(
@@ -551,6 +561,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
          template="It is {intensifier} correct.",
          emo_pos=['nervous', 'anxious', 'on edge'],
          emo_neg=['calm', 'peaceful', 'relaxed'],
+         intensifiers=frequency_weights,
          descriptor = {"Questionnair":"GAD7",
                        "Factor":"GAD",
                        "Ordinal":1,
@@ -559,7 +570,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
       **kwargs,
       )
    ```
-4. Your code should look like this after following steps 1-3:
+4. Here is how our code looks like after steps 1-3:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -582,6 +593,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
             template="It is {intensifier} correct.",
             emo_pos=['nervous', 'anxious', 'on edge'],
             emo_neg=['calm', 'peaceful', 'relaxed'],
+            intensifiers=frequency_weights,
             descriptor = {"Questionnair":"GAD7",
                           "Factor":"GAD",
                           "Ordinal":1,
@@ -595,7 +607,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
    Q = GAD7Q1
    ```
 6. Follow steps 9-13 of the "Steps for defining and running a QMNLI question" guide.
-7. In the end (after steps 1-6), your code should look like this:
+7. Finally, after steps 1-6, our code looks like this:
    ```
    from qlatent.qmnli.qmnli import *
 
@@ -618,6 +630,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
             template="It is {intensifier} correct.",
             emo_pos=['nervous', 'anxious', 'on edge'],
             emo_neg=['calm', 'peaceful', 'relaxed'],
+            intensifiers=frequency_weights,
             descriptor = {"Questionnair":"GAD7",
                           "Factor":"GAD",
                           "Ordinal":1,
@@ -649,7 +662,7 @@ In this guide, we'll construct the GAD7Q1 question as a _QMNLI question.
 ## NSP - Next Sequence Predicion
 
 Given 2 sequences of characters, NSP is an NLP task that checks how good the 2nd sequence is as a follow up for the 1st sequence.<br>
-In the qlatent package's case, the sequences are sentences that represent questions and their corresponding possible answers. The higher the score the 2nd sequence gets - the higher the likelyhood that the 2nd sequence will come after the 1st sequence, and vice versa.
+In the qlatent package's case, the sequences are sentences that represent questions and their corresponding possible answers. The higher the score the 2nd sequence gets - the higher the likelyhood that the 2nd sequence will come after the 1st sequence. Conversely, a lower score indicates a lower likelyhood for the 2nd sequence to follow the 1st sequence.
 
 ### Steps for Defining and Running a QNSP Question
 
@@ -697,7 +710,7 @@ In this guide, we'll construct the ASIQ2 question as a QNSP question.
                'index':self.dict_objective,
    }
    ```
-   5.3 Define the questions descriptor:
+   5.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
                  "Factor":"H",
@@ -868,7 +881,7 @@ In this guide, we'll construct the ASIQ2 question as a QNSP question.
 
 ## CoLA - Corpus of Linguistic Acceptability
 
-The CoLA task is an NLP task that checks the grammatical acceptability of English text. The higher the score a text gets - the more grammatically correct the text is, and vice versa.
+The CoLA task is an NLP task that checks the grammatical acceptability of English text. The higher the score a text gets - the more grammatically correct the text is. Conversely, a lower score indicates a more grammatically incorrect text.
 
 ### Steps for Defining and Running a QCOLA Question
 
@@ -915,7 +928,7 @@ In this guide, we'll construct the ASIQ2 question as a QCOLA question.
                'index':self.dict_objective,
    }
    ```
-   5.3 Define the questions descriptor:
+   5.3 Define the question's descriptor:
    ```
    descriptor = {"Questionnair":"ASI",
                  "Factor":"H",
