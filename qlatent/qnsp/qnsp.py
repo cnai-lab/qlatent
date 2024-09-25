@@ -19,18 +19,21 @@ import torch
 
 
 class NextSentencePredictionPipeline():
-  def __init__(self, model_name='bert-base-uncased'):
+  def __init__(self, model_name='bert-base-uncased', device=0):
     self.tokenizer = BertTokenizer.from_pretrained(model_name)
     self.model = BertForNextSentencePrediction.from_pretrained(model_name, return_dict=True)
+    self.model.to(device)
 
-  def __call__(self, sentence_pairs):
+  def __call__(self, sentence_pairs, device=0):
     results = []
 #     print(sentence_pairs)
 #     for prompt, next_sentence in sentence_pairs:
     prompt = sentence_pairs[0]
     next_sentence = sentence_pairs[1]
-    encoding = self.tokenizer(prompt, next_sentence, return_tensors='pt')
-    outputs = self.model(**encoding, next_sentence_label=torch.LongTensor([1]))
+    encoding = self.tokenizer(prompt, next_sentence, return_tensors='pt').to(device)
+    next_sentence_label = torch.LongTensor([1]).to(device)
+    outputs = self.model(**encoding, labels=next_sentence_label)
+#     outputs = self.model(**encoding, next_sentence_label=torch.LongTensor([1]))
     logits = outputs.logits
     results.append(logits)
     return torch.vstack(results).detach()
@@ -74,9 +77,10 @@ class QNSP(QABSTRACT):
         assert torch.all(torch.eq(coo.T, self._keywords_grid_idx))
 
         self._pdf["P"] = p
-        
+#         print(self._pdf)
         self._T = time.time() - T
         self.result = self
+#         print(self.result)
         return self.result
 
 

@@ -14,9 +14,7 @@ from ..qabstract.qabstract import *
 from ..qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 
-class QMLM(QABSTRACT):
-
-    
+class QMLM(QABSTRACT):    
     def __init__(self,
                  template:str,
                  dimensions:DIMENSIONS = {},
@@ -57,19 +55,15 @@ class QMLM(QABSTRACT):
 
         mask_num = query.count(mask_token) 
         start_index = [m.start() for m in re.finditer(re.escape(mask_token), query)][j]
-
         query = query[:start_index] + mask + query[start_index + len(mask_token):]
-    #     print(query)
 
         ans = self.model(query, targets=token_str[:1])
 
-    #     print(ans)
-        # prob_of_each_token - the propability of the sentence for each token of the dimension
         if token_count > 1:
             probs = [ans[j][0]["score"]]
             for i in range(1, token_count): 
                 start_index = [m.start() for m in re.finditer(re.escape(mask_token), query)][j] 
-                token = token_str[i - 1].replace("##", '')
+                token = token_str[i - 1]
                 mask_len = len(mask_token)
                 query = query[:start_index] + token + query[start_index + mask_len:]
                 ans = self.model(query, targets=token_str[i:i+1])
