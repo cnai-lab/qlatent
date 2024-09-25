@@ -27,8 +27,8 @@ import unittest
 import seaborn as sns
 import gc
 
-from ..qlatent.qmnli import qmnli
-from ..qlatent.qmnli.qmnli import *
+from qlatent.qmnli import qmnli
+from qlatent.qmnli.qmnli import *
 
 
 device = 0 if torch.cuda.is_available() else -1
