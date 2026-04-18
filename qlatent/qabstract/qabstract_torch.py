@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
+import seaborn as sns
 import scipy
 import time
 import sklearn as sk
@@ -36,8 +36,10 @@ def dict_pos_neg(pos, neg, w):
 
 
 def _filter_tensor(t, slices):
-    for i in range(len(slices)):
-        t = t[slices[i]]
+    # Ensure the length of slices does not exceed the first dimension of t
+    if len(slices) > t.shape[0]:
+        raise ValueError(f"Cannot keep {num_to_keep} elements from a tensor of size {t.shape[0]}")
+    t = t[:len(slices)]
     return t
 
 
@@ -86,12 +88,12 @@ def wrap_replace_callable(c, f, with_copy=False, *fargs, **fkwargs):
 class QABSTRACT(ABC):
 
     
-    def __init__(self, dimensions:DIMENSIONS = {}, model: pipeline = None, probabilities=None, index=None, scale='intensifier', descriptor = {}):
+    def __init__(self, dimensions:DIMENSIONS = {}, model: pipeline = None, p=None, index=None, scale='intensifier', descriptor = {}):
         
         self._dimensions = dimensions
         self._field_names = list(self._dimensions.keys())
         self._scale = scale
-        self.result = None
+#         self.result = None
         self._index = index if index is not None else list(set(self._field_names) - set([scale]))
         self._descriptor = descriptor
         self._descriptor['scale'] = str(self._scale)
@@ -102,7 +104,7 @@ class QABSTRACT(ABC):
         self._keywords_indices = {d:dict([(k,i) for i,k in enumerate(self._keywords[d])]) for d in self._keywords}
         #print(f"_keywords_indices={self._keywords_indices}")
         self._dimshape = tuple([len(self._keywords[d]) for d in self._field_names])
-        #print(f"_dimshape={self._dimshape}")
+#         print(f"_dimshape={self._dimshape}")
 
         self._keywords_grid = list(itertools.product(*[self._keywords[f] for f in self._field_names]))
         #print(f"_keywords_grid={self._keywords_grid}")
@@ -125,15 +127,58 @@ class QABSTRACT(ABC):
         self._pdf = pd.DataFrame(self._keywords_grid, columns=self._field_names)
         self._pdf = self._pdf.assign(P=0)
         self._pdf = self._pdf.assign(W=self._weights_flat)
+#         print(type(self._weights_flat))
         #print(f"_pdf={self._pdf}")
         
 
-        self._p = probabilities
+        self._t = p
         self.model = model
-        
 
+        
+#     def custom_deepcopy(self):
+#         # Create a new instance of the same class
+#         result = self.__class__.__new__(self.__class__)  
+
+#         for key, value in self.__dict__.items():  
+# #             print(key, type(value))
+#             if isinstance(value, torch.Tensor):
+#                 # Clone tensor instead of deep copying
+#                 setattr(result, key, value.clone())
+#             elif callable(value):
+#                 # Assign method reference directly
+#                 setattr(result, key, value)
+#             else:
+#                 # Deepcopy for other attributes
+#                 setattr(result, key, copy.deepcopy(value))  
+
+#         return result
+
+    def custom_deepcopy(self):
+        # Create a new instance of the same class
+        result = self.__class__.__new__(self.__class__)
+
+        for key, value in self.__dict__.items():
+#             print(key, type(value))
+            # Special case for the model attribute - assign by reference
+            if key == 'model':
+#                 print(key)
+                setattr(result, key, value)  # Direct reference, no copy
+            elif isinstance(value, torch.Tensor):
+                # Clone tensor instead of deep copying
+                setattr(result, key, value.clone())
+            elif callable(value):
+                # Assign method reference directly
+                setattr(result, key, value)
+            else:
+                # Deepcopy for other attributes
+                setattr(result, key, copy.deepcopy(value))
+
+        return result
+
+    
     @abstractmethod
     def run(self, model, pre_text=None):
+#         print("QABSTRACT RUN 1")
         if model:
             self.model = model
         
@@ -252,6 +297,58 @@ class QABSTRACT(ABC):
         self.model = model
        
           
+#     def softmax(self, dim=0, temperature = 1):
+#         """
+#         params:
+#         dim: int or tuple. The dimensions to normalize with softmax. Dimesions will be normalized one by one in the given order.
+#         """
+#         if not fixed_check_type(dim, List):
+#             dim = [dim]
+#         if fixed_check_type(dim, List[str]):
+#             dim = [self._field_names.index(d) for d in dim]
+#         elif fixed_check_type(dim, List[int]):
+#             pass
+#         else:
+#             raise TypeError(dim)
+
+# #         result = copy.deepcopy(self,memo={id(self.model):self.model})
+#         result = self.custom_deepcopy()
+# #         print("I did a deep copy")
+#         # del result.model
+#         # result.model = self.model
+#         coo = self._keywords_grid_idx.T
+#         p = self._t
+#         coo = coo.to(p.device)
+#         p_dense = torch.sparse_coo_tensor(coo, p, self._dimshape).to_dense()
+#         p_sparse = p_dense.to_sparse()
+#         p_vals = p_sparse.values()
+#         p_coos = p_sparse.indices()
+#         assert torch.all(torch.eq(p, p_vals))
+#         assert torch.all(torch.eq(coo, p_coos))
+                
+#         print(f"Original p shape: {p.shape}")
+#         print(f"Original coo shape: {coo.shape}")
+#         print(f"p_dense shape: {p_dense.shape}")
+        
+#         for d in dim:
+#             p_log = torch.log(p_dense)
+#             p_log = p_log / temperature
+#             p_dense = torch.nn.functional.softmax(p_log, dim=d)
+            
+#         p_vals = p_dense.to_sparse().values()
+# #         print(f"p values after softmax: {p_vals}")
+#         result._t = p_vals
+#         result._pdf["P"] = p_vals.detach().cpu()
+        
+
+#         # Add after softmax
+#         print(f"After softmax shape: {p_dense.shape}")
+#         print(f"Final result._t shape: {result._t.shape}")
+
+#         return result    
+
+
+          
     def softmax(self, dim=0, temperature = 1):
         """
         params:
@@ -266,31 +363,47 @@ class QABSTRACT(ABC):
         else:
             raise TypeError(dim)
 
-        result = copy.deepcopy(self,memo={id(self.model):self.model})
-        # del result.model
-        # result.model = self.model
-        grid_indices = self._keywords_grid_idx.T
-        probabilities = torch.Tensor(self._pdf["P"])
-        p_dense = torch.sparse_coo_tensor(grid_indices, probabilities, self._dimshape).to_dense()
-
-        p_sparse = p_dense.to_sparse()
-        p_vals = p_sparse.values()
-        p_coos = p_sparse.indices()
-        assert torch.all(torch.eq(probabilities, p_vals))
-        assert torch.all(torch.eq(grid_indices, p_coos))
-                
+        result = self.custom_deepcopy()
+        # Get the dense representation first
+        coo = self._keywords_grid_idx.T
+        p = self._t
+        coo = coo.to(p.device)
+        p_dense = torch.sparse_coo_tensor(coo, p, self._dimshape).to_dense()
+      
+        # print(f"Original p shape: {p.shape}")
+#         print(f"Original coo shape: {coo.shape}")
+#         print(f"p_dense shape: {p_dense.shape}")
+        
+        # Store original structure
+        original_indices = coo.clone()
+        
+        # Apply softmax while preserving zeros
         for d in dim:
-            p_log = torch.log(p_dense)
-            p_log = p_log / temperature
+            # Create a small epsilon to avoid log(0)
+            epsilon = 1e-10
+            # Add epsilon to zeros to maintain gradient flow
+            p_safe = p_dense + epsilon
+            p_log = torch.log(p_safe) / temperature
             p_dense = torch.nn.functional.softmax(p_log, dim=d)
-            
+    
 
-        p_vals = p_dense.to_sparse().values()
+        # Use the original indices to extract values from the softmaxed dense tensor
+        # This preserves the original structure without losing dimensions
+        new_values = torch.zeros_like(p)
+        for i in range(original_indices.shape[1]):
+            idx = tuple(original_indices[:, i].long().tolist())
+            new_values[i] = p_dense[idx]
 
-        result._pdf["P"] = p_vals
-        return result    
-
-
+        result._t = new_values
+#         result._pdf["P"] = new_values.detach().cpu()
+        result._pdf["P"] = new_values.detach().cpu().to(torch.float32)
+#         print(f"After softmax shape: {p_dense.shape}")
+#         print(f"Final result._t shape: {result._t.shape}")
+        return result
+    
+    
+    
+    
     def minmax(self, dim=Union[str,int,List[str],List[int]]):
         """
         params:
@@ -306,15 +419,16 @@ class QABSTRACT(ABC):
             raise TypeError(dim)
 
         result = copy.deepcopy(self,memo={id(self.model):self.model})
-        grid_indices = self._keywords_grid_idx.T
-        probabilities = torch.Tensor(self._pdf["P"])
-        p_dense = torch.sparse_coo_tensor(grid_indices, probabilities, self._dimshape).to_dense()
+        coo = self._keywords_grid_idx.T
+#         p = torch.Tensor(self._pdf["P"])
+        p = self._t
+        p_dense = torch.sparse_coo_tensor(coo, p, self._dimshape).to_dense()
 
         p_sparse = p_dense.to_sparse()
         p_vals = p_sparse.values()
         p_coos = p_sparse.indices()
-        assert torch.all(torch.eq(probabilities, p_vals))
-        assert torch.all(torch.eq(grid_indices, p_coos))
+        assert torch.all(torch.eq(p, p_vals))
+        assert torch.all(torch.eq(coo, p_coos))
 
         print(p_dense.shape)
         for d in dim:
@@ -325,7 +439,8 @@ class QABSTRACT(ABC):
 
         p_vals = p_dense.to_sparse().values()
 
-        result._pdf["P"] = torch.Tensor(p_vals)
+#         result._pdf["P"] = torch.Tensor(p_vals)
+        result._t = torch.Tensor(p_vals)
         return result
         
     
@@ -376,21 +491,102 @@ class QABSTRACT(ABC):
         return result
 
 
-    def mean_score(self, filter:FILTER={}):
-        select = _filter_data_frame(self._pdf,filter)
-        P = self._pdf[select]
-        score = P["P"]*P["W"]
-        score = score.mean()
-        return score
+#     def mean_score(self, filter:FILTER={}):
+#         select = _filter_data_frame(self._pdf,filter)
+#         P = self._pdf[select]
+#         score = P["P"]*P["W"]
+#         score = score.mean()
+#         return score
+
+#     def mean_score(self, filter:FILTER={}):
+#         select = _filter_data_frame(self._pdf,filter)
+#         selected_indices = select.to_numpy()
+#         print("select --> ", select)
+#         weights_aligned = self._pdf["W"].values
+#         P = _filter_tensor(self._t, selected_indices)
+#         W = _filter_tensor(torch.tensor(self._weights_flat.values, dtype=torch.float32), selected_indices)
+# #         W = _filter_tensor(torch.tensor(weights_aligned, dtype=torch.float32), selected_indices)
+#         W = W.to(P.device)
+#         print(P)
+#         print(W)
+#         score = P.clone() * W.clone()
+#         score = score.mean()
+#         return score
+
+    def mean_score(self, filter: FILTER = {}):
+            # 1. Get the boolean mask from the DataFrame logic
+            mask = _filter_data_frame(self._pdf, filter)
+
+            # 2. Apply mask to DataFrame first to get the valid subset
+            # This handles the alignment and drops rows that shouldn't be there
+            subset = self._pdf[mask]
+
+            # 3. Extract the integer indices from the subset
+            # e.g., if subset has rows [0, 1, 4], we need indices [0, 1, 4]
+            indices = subset.index.to_numpy()
+            indices_t = torch.tensor(indices, device=self._t.device, dtype=torch.long)
+
+            # 4. Use integer indices to select from the full tensor self._t
+            # This bridges the gap between the subset DataFrame and the full Tensor
+            P = self._t[indices_t]
+
+            # 5. Get aligned weights from the subset
+            weights_vals = subset["W"].values
+            W = torch.tensor(weights_vals, device=self._t.device, dtype=torch.float32)
+
+            # 6. Compute Score
+            score = P.clone() * W.clone()
+
+            # Handle NaNs (matching Pandas behavior)
+            if torch.isnan(score).any():
+                valid_count = (~torch.isnan(score)).sum()
+                if valid_count == 0:
+                    return torch.tensor(float('nan'))
+                score = torch.nansum(score) / valid_count
+            else:
+                score = score.mean()
+
+            return score
     
     
     def effect_size(self, filter:FILTER={}):
         select = _filter_data_frame(self._pdf,filter)
-        P = self._pdf[select]
-        score = P["P"]*P["W"]
-        
+        selected_indices = select.to_numpy()
+        P = _filter_tensor(self._t, selected_indices)
+        W = _filter_tensor(torch.tensor(self._weights_flat.values, dtype=torch.float32), selected_indices)
+        device = P.device  # Ensure W is moved to the same device as P
+#         print(f"device = {device}")
+        score = P.clone() * W.clone().to(device)
+
+#         score = P.clone() * W.clone()
         effect_size = score.mean() / score.std()
         return effect_size
+    
+    
+    def effect_size_pos_neg(self, filter:FILTER={}):
+        select = _filter_data_frame(self._pdf,filter)
+        selected_indices = select.to_numpy()
+        P = _filter_tensor(self._t, selected_indices)
+        W = _filter_tensor(torch.tensor(self._weights_flat.values, dtype=torch.float32), selected_indices)
+        
+        positive_indices = torch.where(W > 0)[0]
+        negative_indices = torch.where(W < 0)[0]
+
+        # Extract the values from both tensors using the positive indices
+        w_positive_values = W[positive_indices]
+        p_positive_values = P[positive_indices]
+        
+        # Extract the values from both tensors using the negative indices
+        w_negative_values = W[negative_indices]
+        p_negative_values = P[negative_indices]
+
+        score_pos = w_positive_values.clone() * p_positive_values.clone()
+        effect_size_pos = score_pos.mean() / score_pos.std()
+
+        score_neg = w_negative_values.clone() * p_negative_values.clone()
+        effect_size_neg = score_neg.mean() / score_neg.std()
+
+        return effect_size_pos - effect_size_neg
 
 
     def internal_consistency(self, measure="silhouette_score", metric="correlation", grouping:List[FILTER]=[], scale:Union[str,int] = None, index:List[str] = None, filter:FILTER={}):
@@ -464,7 +660,7 @@ class QABSTRACT(ABC):
     
     def inner_alpha(self, filter:FILTER={}):
         df = self.to_dataframe(scale=self._scale, index=self._index, filter=filter)
-        if hasattr(self, '_filter') and bool(self._filter) and self._index[0] in self._filter:
+        if bool(self._filter):
             indecies_list = self._filter[self._index[0]]
             dict_items = self._dimensions[self._index[0]].items()
             matches = [(key, value) for key, value in dict_items if key in indecies_list]
@@ -476,7 +672,7 @@ class QABSTRACT(ABC):
         for group in grouping:
             vals = group[self._index[0]]
             print(vals, 'Alpha:',pg.cronbach_alpha(data=df.T[vals])[0])
-        if not (hasattr(self, '_filter') and bool(self._filter)):
+        if not bool(self._filter):
             a3 = pg.cronbach_alpha(pd.DataFrame((df.T.to_numpy() * group_scores.to_numpy())))
             print('Global alpha:', a3[0])
             return a3[0]

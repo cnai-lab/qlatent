@@ -1096,36 +1096,45 @@ In this guide, we'll construct the ASIQ2 question as a QCOLA question.
 
 # Model Training Utility
 
-This class is a utility for training language models using the Hugging Face Transformers library. It supports training with both Masked Language Modeling (MLM) and Natural Language Inference (NLI) heads.
+This class is a utility for training language models using the Hugging Face Transformers library. It supports training with both Masked Language Modeling (MLM) and Natural Language Inference (NLI) heads, and includes functionality to handle dataset formats, copying weights, and saving checkpoints.
 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Public Methods](#public-methods)
-  - [train_head](#train-head)
-  - [attach_head_to_model](#attach-head-to-model)
-  - [get_non_base_layers](#get-non-base-layers)
-  - [init_head](#init-head)
-- [Usage](#usage)
-  - [Initialization](#initialization)
-  - [Training an MLM Model](#training-an-mlm-model)
-  - [Training an NLI Model](#training-an-nli-model)
-  - [Copying Weights](#copying-weights)
 - [Callbacks](#callbacks)
-- [Formats and parameter constraints](#constraints)
+  - [__init__](#init)
+  - [on_epoch_end](#on_epoch_end)
+- [DataLoader](#dataloader)
+  - [__init__](#init-DataLoader)
+  - [_print_dataset_status](#_print_dataset_status)
+  - [_convert_labels_to_numeric](#_convert_labels_to_numeric)
+  - [_load_csv_data](#_load_csv_data)
+  - [_prepare_dict_dataset](#_prepare_dict_dataset)
+- [Public Methods](#public-methods)
+  - [train_head](#train_head)
+  - [fix_model_embedding_layer](#fix_model_embedding_layer)
+  - [init_head](#init_head)
+  - [get_non_base_layers](#get_non_base_layers)
+  - [attach_head_to_model](#attach_head_to_model)
+- [Formats and Parameter Constraints](#formats-and-parameter-constraints)
   - [Dataset Format](#dataset-format)
   - [CSV Format](#csv-format)
+  - [Dictionary Format](#dictionary-format)
   - [Parameter Constraints](#parameter-constraints)
 - [Usage Examples](#usage-examples)
-  - [Example of an MLM head loaded from an MLM model trained with dataset](#example-of-an-mlm-head-loaded-from-an-mlm-model-trained-with-dataset)
-  - [Example of an MLM head loaded from an MLM model trained with csv](#example-of-an-mlm-head-loaded-from-an-mlm-model-trained-with-csv)
-  - [Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset, but saving an MNLI head instead of the trained MLM head](#example-of-an-mlm-head-loaded-from-an-nli-model-with-copied-weights-and-biases-from-a-trained-mlm-head-trained-on-dataset-but-saving-an-mnli-head-instead-of-the-trained-mlm-head)
-  - [Example of an MLM head loaded from an NLI model with weights and biases initialized randomly, trained with dataset](#example-of-an-mlm-head-loaded-from-an-nli-model-with-weights-and-biases-initialized-randomly-trained-with-dataset)
-  - [Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset](#example-of-an-mlm-head-loaded-from-an-nli-model-with-copied-weights-and-biases-from-a-trained-mlm-head-trained-on-dataset)
-  - [Example of an MNLI head loaded from an MNLI model trained with csv](#example-of-an-mnli-head-loaded-from-an-mnli-model-trained-with-csv)
-  - [Example of an NLI loaded from an NLI model, trained on dataset](#example-of-an-nli-loaded-from-an-nli-model-trained-on-dataset)
-  - [Example of an NLI head loaded from an MLM model with weights and biases initialized randomly](#example-of-an-nli-head-loaded-from-an-mlm-model-with-weights-and-biases-initialized-randomly)
-  - [Example of an NLI head loaded from MLM model with copied weights and biases from a trained NLI head](#example-of-an-nli-head-loaded-from-mlm-model-with-copied-weights-and-biases-from-a-trained-nli-head)
+  - [Example of an MLM head loaded from an MLM model, trained with dataset (saving checkpoint).](#example-of-an-mlm-head-loaded-from-an-mlm-model-trained-with-dataset-saving-checkpoint)
+  - [Example of an MLM head loaded from an MLM model, trained with CSV.](#example-of-an-mlm-head-loaded-from-an-mlm-model-trained-with-csv)
+  - [Example of an MLM head loaded from an MLM model, trained with a dictionary of lists.](#example-of-an-mlm-head-loaded-from-an-mlm-model-trained-with-a-dictionary-of-lists)
+  - [Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset, but saving the NLI head instead of the trained MLM head.](#example-of-an-mlm-head-loaded-from-an-nli-model-with-copied-weights-and-biases-from-a-trained-mlm-head-trained-on-dataset-but-saving-the-nli-head-instead-of-the-trained-mlm-head)
+  - [Example of an MLM head loaded from an NLI model with weights and biases initialized randomly, trained with dataset.](#example-of-an-mlm-head-loaded-from-an-nli-model-with-weights-and-biases-initialized-randomly-trained-with-dataset)
+  - [Example of an MLM head loaded from an NLI model with weights and biases initialized randomly, trained with CSV.](#example-of-an-mlm-head-loaded-from-an-nli-model-with-weights-and-biases-initialized-randomly-trained-with-csv)
+  - [Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on CSV.](#example-of-an-mlm-head-loaded-from-an-nli-model-with-copied-weights-and-biases-from-a-trained-mlm-head-trained-on-csv)
+  - [Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset.](#example-of-an-mlm-head-loaded-from-an-nli-model-with-copied-weights-and-biases-from-a-trained-mlm-head-trained-on-dataset)
+  - [Example of an NLI head loaded from an NLI model, trained on CSV.](#example-of-an-nli-head-loaded-from-an-nli-model-trained-on-csv)
+  - [Example of an NLI head loaded from an NLI model, trained on dataset.](#example-of-an-nli-head-loaded-from-an-nli-model-trained-on-dataset)
+  - [Example of an NLI head loaded from an NLI model, trained on a dictionary of lists.](#example-of-an-nli-head-loaded-from-an-nli-model-trained-on-a-dictionary-of-lists)
+  - [Example of an NLI head loaded from an MLM model with weights and biases initialized randomly.](#example-of-an-nli-head-loaded-from-an-mlm-model-with-weights-and-biases-initialized-randomly)
+  - [Example of an NLI head loaded from an MLM model with copied weights and biases from a trained NLI head.](#example-of-an-nli-head-loaded-from-an-mlm-model-with-copied-weights-and-biases-from-a-trained-nli-head)
 
 
 ## Installation
@@ -1133,234 +1142,271 @@ This class is a utility for training language models using the Hugging Face Tran
 To use this code, you need to install the required packages. You can do this by running:
 
 ```bash
-pip install transformers datasets torch numpy
+pip install qlatent transformers datasets torch numpy
 ```
 
-Install the [qlatent](https://pypi.org/project/qlatent/) package from PyPi: 
-
+To import the ModelTrainer utility do the following:
 ```bash
-pip install qlatent
+from qlatent.utils import ModelTrainer
 ```
 
+## Callbacks
 
+The `SaveCheckpointByEpochCallback` is a callback class that facilitates saving model and tokenizer states at the end of each training epoch. It allows periodic checkpoints during training, storing them in a specified directory for later use or evaluation.
+
+#### Functions:
+
+#### __init__
+`__init__(self, output_dir: str, tokenizer, save_checkpoint: bool, epochs_to_save: list[int], head_to_save)`
+
+This is the initialization method for the callback.
+
+##### Parameters:
+
+- `output_dir (str)`: The directory where the checkpoints will be saved.
+- `tokenizer`: The tokenizer associated with the model being trained.
+- `save_checkpoint (bool)`: A flag indicating whether checkpoints should be saved. Default is `False`.
+- `epochs_to_save (list[int])`: A list specifying which epochs to save checkpoints for. If empty or `None`, checkpoints will be saved at every epoch.
+- `head_to_save`: If specified, the head model to save during the checkpoint.
+
+#### on_epoch_end
+`on_epoch_end(self, args, state, control, model=None, **kwargs)`
+
+This method is automatically called by the Trainer at the end of each epoch. It saves the model and tokenizer to a subdirectory named after the current epoch.
+
+##### Parameters:
+
+- `args`: The training arguments.
+- `state`: The current state of the Trainer.
+- `control`: The current control object.
+- `model`: The model being trained. Default is `None`.
+- `**kwargs`: Additional keyword arguments.
+
+
+## Dataloader
+
+---
+
+The `DataLoader` class is designed to load, process, and prepare datasets for two types of natural language processing tasks: Natural Language Inference (NLI) and Masked Language Modeling (MLM). It supports loading data from CSV files using the Hugging Face `load_dataset` function or directly from dictionary objects, converting the data into a Hugging Face `DatasetDict` for seamless integration with NLP pipelines.
+
+---
+
+### __init__-DataLoader
+`__init__(self, label2_id)`
+- **Description:**  
+  Initializes the `DataLoader` instance with label-to-ID mapping used for converting string labels into numeric values in NLI tasks.
+- **Parameters:**  
+  - `label2_id`: A dictionary mapping textual labels to numeric IDs (e.g., `{'entailment': 0, 'neutral': 1, 'contradiction': 2}`).
+
+---
+
+## Methods
+
+### _print_dataset_status 
+`_print_dataset_status(self, dataset, task_type)`
+- **Description:**  
+  Prints the number of samples in the training split and, if available, the validation split.
+- **Parameters:**  
+  - `dataset`: A dictionary containing the data splits (typically with keys such as `'train'` and optionally `'validation'`).
+  - `task_type` (str): Specifies the type of task.  
+    - For NLI tasks (`'nli'`), the sample count is determined by the length of the `'premise'` list.
+    - For MLM tasks (`'mlm'`), the sample count is determined by the length of the dataset.
+- **Behavior:**  
+  - Displays the number of training samples.
+  - If a validation split exists, displays the number of validation samples.
+
+---
+
+### _convert_labels_to_numeric 
+`_convert_labels_to_numeric(self, dataset, task_type)`
+- **Description:**  
+  Converts non-numeric labels in the dataset to numeric labels using the provided `label2_id` mapping. This conversion is applied only for NLI tasks when `label2_id` is available.
+- **Parameters:**  
+  - `dataset`: A Hugging Face `Dataset` object.
+  - `task_type` (str): The type of task; conversion is applied only if `task_type` is `'nli'`.
+- **Returns:**  
+  - The modified dataset with labels converted to numeric values where applicable.
+
+---
+
+### _load_csv_data 
+`_load_csv_data(self, dataset_path, task_type, num_percentage_validation, val_dataset)`
+- **Description:**  
+  Loads CSV data using the Hugging Face `load_dataset` function and prepares it for the specified task type (NLI or MLM). Supports splitting the training data into a validation set based on a specified percentage if a separate validation dataset is not provided.
+- **Parameters:**  
+  - `dataset_path` (str): Path to the CSV file containing the training data.
+  - `task_type` (str): Indicates the task type; accepted values are `'nli'` and `'mlm'`.
+  - `num_percentage_validation` (float): A float between 0 and 1 representing the proportion of the training data to use for validation if a separate validation file is not provided.
+  - `val_dataset` (optional): Path to a CSV file containing a separate validation dataset.
+- **Behavior:**  
+  - Loads the training (and optionally validation) data using the `load_dataset` function.
+  - If a separate validation dataset is not provided and a valid percentage is specified, the training data is split into training and validation sets.
+  - Applies numeric conversion of labels for NLI tasks.
+- **Returns:**  
+  - A Hugging Face `DatasetDict` with `'train'` and, if applicable, `'validation'` splits.
+
+---
+
+### _prepare_dict_dataset
+`_prepare_dict_dataset(self, data_dict, task_type, num_percentage_validation, val_dataset)`
+- **Description:**  
+  Prepares a dataset from a provided dictionary, ensuring it is in the correct format for either NLI or MLM tasks. It can handle cases where a validation set is provided separately or needs to be generated by splitting the training data.
+- **Parameters:**  
+  - `data_dict` (dict):  
+    - For NLI tasks, it must include a `'train'` key with sub-keys `'premise'`, `'hypothesis'`, and `'label'`. Optionally, a `'validation'` key may also be provided.
+    - For MLM tasks, the `'train'` key should map to a list of texts. A separate `'validation'` key can also be provided.
+  - `task_type` (str): Specifies the task type (`'nli'` or `'mlm'`).
+  - `num_percentage_validation` (float): A float between 0 and 1 that determines the percentage of the training data to use for validation if a separate validation set is not provided.
+  - `val_dataset` (optional): A separate validation dataset (as a dictionary) if available.
+- **Behavior:**  
+  - Validates the format of the input dictionary based on the task type.
+  - **For NLI:**
+    - Ensures the presence of required keys (`'premise'`, `'hypothesis'`, and `'label'`).
+    - Converts the dictionary splits into Hugging Face `Dataset` objects.
+    - If no validation set is provided and a valid percentage is specified, it splits the training data accordingly.
+  - **For MLM:**
+    - Checks that the training data is provided as a list of texts.
+    - Processes the available splits similarly, including an optional split for validation.
+  - Converts non-numeric labels to numeric values where necessary.
+- **Returns:**  
+  - A Hugging Face `DatasetDict` containing the prepared `'train'` split and, if applicable, the `'validation'` split.
+
+
+---
 
 ## Public Methods
 
 ### train_head
-Trains the specified head (NLI or MLM) of the model.
+Trains a model head for either MLM or NLI tasks. Depending on the parameters provided, it calls the internal `_train_mlm` or `_train_nli` methods. This method also supports copying weights from a pre-initialized model head.
 
 **Arguments:**
 - `model`: The model to be trained.
-- `tokenizer`: The tokenizer to be used for training.
-- `dataset`: The dataset or path to the dataset for training.
-- `nli_head` (bool): Whether to train the NLI head.
-- `mlm_head` (bool): Whether to train the MLM head.
-- `model_to_copy_weights_from`: Model from which to copy the weights for initialization (optional).
-- `num_samples_train`: Number of training samples to use (optional).
-- `num_samples_validation`: Number of validation samples to use (optional).
-- `val_dataset`: Validation dataset (optional).
-- `validate` (bool): Whether to use validation during training.
-- `training_model_max_tokens` (int): Maximum number of tokens for the training model.
-- `batch_size` (int): The batch size for training.
-- `num_epochs` (int): Number of epochs for training.
-- `learning_rate` (float): Learning rate for training.
-- `freeze_base` (bool): Whether to freeze the base model parameters.
-- `copy_weights` (bool): Whether to copy weights from another model.
-- `checkpoint_path`: Path to save checkpoints.
-- `head_to_save`: The model head to save during the checkpoint.
+- `tokenizer`: The tokenizer used for preprocessing the text.
+- `dataset`: The dataset for training. It can be a CSV file path, a `DatasetDict`, or a dictionary.
+- `label2_id` (dict, optional): Mapping of label names to IDs for NLI tasks.
+- `nli_head` (bool, optional): Set to `True` to train an NLI head.
+- `mlm_head` (bool, optional): Set to `True` to train an MLM head.
+- `model_to_copy_weights_from` (optional): A model from which to copy head weights.
+- `num_samples_train` (int, optional): Number of training samples to use.
+- `num_samples_validation` (int, optional): Number of validation samples to use.
+- `num_percentage_validation` (float, optional): Fraction of training data to reserve for validation if no separate validation set is provided.
+- `shuffle_dataset` (bool, optional): Whether to shuffle the dataset before training.
+- `val_dataset` (optional): A separate validation dataset (CSV path, `DatasetDict`, or dictionary).
+- `batch_size` (int, optional): Batch size for training (default is 16).
+- `num_epochs` (int, optional): Number of training epochs (default is 10).
+- `learning_rate` (float, optional): Learning rate (default is 2e-5).
+- `training_model_max_tokens` (int, optional): Maximum token length for training. If not specified, it is computed from the dataset.
+- `freeze_base` (bool, optional): Whether to freeze the base model layers during training.
+- `copy_weights` (bool, optional): Whether to initialize the head by copying weights from another model.
+- `save_checkpoint` (bool, optional): Whether to save model checkpoints during training.
+- `checkpoint_path` (str, optional): Directory path to save checkpoints.
+- `epochs_to_save` (list[int], optional): List of epoch numbers at which checkpoints will be saved.
+- `head_to_save` (str, optional): Specifies which head to save in the checkpoint.
+- `fix_model_embedding_layer` (bool, optional): Whether to fix embedding layer in NLI models.
 
 **Returns:**
-- None.
+- The trained model.
 
-### attach_head_to_model
-Attaches a model head to a specified model.
+---
+
+### fix_model_embedding_layer
+Adjusts the token type embedding layer for NLI models. If the model's `type_vocab_size` is less than 2, this method updates the configuration and creates a new embedding layer with two token types by duplicating the original embedding.
 
 **Arguments:**
-- `head1`: The head to attach to.
-- `head2`: The head to attach from.
-- `model_identifier` (str): Identifier for the model.
+- `nli_model`: The NLI model whose embedding layer needs to be modified.
 
 **Returns:**
-- None.
+- None (modifies the model in place).
 
-### get_non_base_layers
-Gets the non-base layers of the model.
-
-**Arguments:**
-- `model`: The model from which to get the non-base layers.
-
-**Returns:**
-- List of non-base layers.
+---
 
 ### init_head
-Initializes the head of the model by copying specified layers from another model.
+Initializes an uninitialized model head by copying specified layers from an initialized head. This is useful for transferring learned weights between models that share the same architecture.
 
 **Arguments:**
-- `uninitialized_head`: The head to initialize.
-- `initialized_head`: The head from which to copy the layers.
-- `layers_to_init` (list[str]): List of layers to initialize.
+- `uninitialized_head`: The model head to be initialized.
+- `initialized_head`: The model head from which to copy weights.
+- `layers_to_init` (list[str]): A list of layer names (or nested attribute paths) to be copied.
 
 **Returns:**
 - None.
 
-## Usage
+---
 
-### Initialization
+### get_non_base_layers
+Retrieves the layers that are not part of the base model. This helps identify the head layers that can be trained or updated separately from the base model parameters.
 
-First, initialize the `ModelTrainer` class:
+**Arguments:**
+- `model`: The model from which to extract the non-base (head) layers.
 
-```python
-from qmnli.utils import ModelTrainer
+**Returns:**
+- A list of layer names corresponding to the head layers.
 
-trainer = ModelTrainer()
-```
+---
 
-### Training an MLM Model
+### attach_head_to_model
+Attaches one model head to another by setting a specified attribute. This function facilitates combining or updating model heads.
 
-To train a model with an MLM head:
+**Arguments:**
+- `head1`: The destination head that will receive the attribute.
+- `head2`: The source head from which the attribute is taken.
+- `model_identifier` (str): The attribute name that identifies the model head.
 
-```python
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+**Returns:**
+- None.
 
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForMaskedLM.from_pretrained(model_path)
+---
 
-trainer.train_head(
-    model=model,
-    tokenizer=tokenizer,
-    dataset='path/to/dataset.csv',
-    mlm_head=True,
-    num_samples_train=10000,
-    num_samples_validation=2000,
-    validate=True,
-    training_model_max_tokens=128,
-    batch_size=16,
-    num_epochs=5,
-    learning_rate=5e-5,
-    freeze_base=False,
-    copy_weights=False,
-    checkpoint_path="./mlm_checkpoints"
-)
-```
+## Formats and Parameter Constraints
 
-### Training an NLI Model
+### Dataset Format
+- **For MLM:**  
+  The dataset should be a `DatasetDict` with keys `'train'` and optionally `'validation'`. The data should include a key `'text'` containing the text strings.
+- **For NLI:**  
+  The dataset should be a `DatasetDict` with keys `'train'` and optionally `'validation'`. The training data must include the keys `'premise'`, `'hypothesis'`, and `'label'`.
 
-To train a model with an NLI head:
+---
 
-```python
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+### CSV Format
+- **For MLM:**  
+  Provide the path to a CSV file that where the data lies under one column: `'text'`
+- **For NLI:**  
+  Provide the path to a CSV file that where the data lies under three columns: `'premise'`, `'hypothesis'`, and `'label'`.
 
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForSequenceClassification.from_pretrained(model_path)
+---
 
-trainer.train_head(
-    model=model,
-    tokenizer=tokenizer,
-    dataset='path/to/nli_dataset.csv',
-    nli_head=True,
-    num_samples_train=10000,
-    num_samples_validation=2000,
-    validate=True,
-    training_model_max_tokens=128,
-    batch_size=16,
-    num_epochs=5,
-    learning_rate=5e-5,
-    freeze_base=False,
-    copy_weights=False,
-    checkpoint_path="./nli_checkpoints",
-    head_to_save=None
-)
-```
+### Dictionary Format
+- **For MLM:**  
+  A dictionary with a `'train'` key (and optionally a `'validation'` key) where the value is a list of text strings.
+- **For NLI:**  
+  A dictionary where the `'train'` (and optionally `'validation'`) key contains sub-keys `'premise'`, `'hypothesis'`, and `'label'` mapping to lists of strings and integers respectively.
 
-### Copying Weights
+---
 
-To copy weights from an initialized model head to another model head:
-- Choose a model with the desired initialized head with the same architecture.
-- Set copy_weights to True and provide the intialized_model you want to copy the parameters from, model_to_copy_weights_from = intialized_model
+### Parameter Constraints
+- **num_samples_train** and **num_samples_validation:**  
+  Specify the number of samples to use for training and validation. If `num_samples_validation` is provided, either `num_percentage_validation` or `val_dataset` must be specified. Be aware that the sampling occurs after the split of the dataset.
+- **num_percentage_validation:**  
+  A float between 0 and 1 that indicates the fraction of training data to be used for validation if no separate validation set is provided.
+- **val_dataset:**  
+  Use this parameter to provide a separate validation dataset when needed.
+- **batch_size, num_epochs, and learning_rate:**  
+  These parameters control the training process and should be set according to your system capabilities and training requirements.
 
-
-### Callbacks
-
-This utility includes a callback class `SaveCheckpointByEpochCallback` to save model checkpoints at the end of each epoch:
-
-```python
-from transformers import TrainerCallback
-
-class SaveCheckpointByEpochCallback(TrainerCallback):
-    def __init__(self, output_dir: str, tokenizer):
-        self.output_dir = output_dir
-        self.tokenizer = tokenizer
-
-    def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        epoch = state.epoch
-        checkpoint_dir = f"{self.output_dir}/checkpoint-epoch-{int(epoch)}"
-        model.save_pretrained(checkpoint_dir)
-        self.tokenizer.save_pretrained(checkpoint_dir)
-```
-
-## Formats and parameter constraints
-
-#### Dataset Format
-
-- **For MLM:**
-  - The dataset object should have `'train'` and `'validation'` keys. To access the sentences within these datasets, ensure there is a key `'text'` that contains sentences as a list value.
-
-- **For NLI:**
-  - The dataset object should have `'train'` and `'validation_matched'` keys. To access the sentences within these datasets, ensure there are keys `'premise'`, `'hypothesis'`, and `'label'`.
-
-#### CSV Format
-
-- **For MLM:**
-  - The CSV file should contain only sentences in the first column, without any headers.
-
-- **For NLI:**
-  - The CSV file should consist of three columns: `'premise'`, `'hypothesis'`, and `'label'`. Make sure the label ids are integers and aligned with the ids the original model is trained on.
-
-#### Parameter Constraints
-- **`num_samples_train` and `num_samples_validation`:**
-  - Using these parameters, you can specify the amount of data taken from each dataset, if unspecified it takes the whole dataset.
-  - if `num_samples_validation` is provided, then `num_samples_train` must be provided as well.
-
-- **val_dataset:**
-  - In case you want a seperate dataset for validation, provide the path to the validation dataset (`val_dataset`) if validation is required (`validate=True`).
-
-- **validate:**
-  - Set `validate=True` if validation is wanted during training.
-
-- **training_model_max_tokens:**
-  - Set the maximum token length (`training_model_max_tokens`) for training samples.
-- **batch_size:**
-  - Specify the batch size (`batch_size`) for training. Adjust based on your hardware capabilities and training performance.
-
-- **num_epochs:**
-  - Set the number of training epochs (`num_epochs`).
-
-- **learning_rate:**
-  - Specify the learning rate (`learning_rate`) for training.
-
-- **freeze_base:**
-  - Set `freeze_base=True` to freeze the base model parameters during training if required.
-
-- **copy_weights:**
-  - Set `copy_weights=True` if you need to copy weights from another model (`model_to_copy_weights_from`). Ensure `model_to_copy_weights_from` is correctly specified and compatible with the current model architecture.
-
-- **head_to_save:**
-  - Set head_to_save to a specific head you want to save, otherwise it saves the head used for the training by default.
-
-## Use Examples
+## Usage Examples
 This section can include various usage examples demonstrating different functionalities and configurations of the ModelTrainer class.
-
-### Example of an MLM head loaded from an MLM model trained with dataset.
+### Example of an MLM head loaded from an MLM model, trained with dataset (saving checkpoint).
 ```python
 base_model_name = "distilbert/distilbert-base-uncased" 
 tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
-dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
+dataset = load_dataset("wikitext", "wikitext-2-raw-v1", ignore_verifications=True)
 trainer = ModelTrainer()
 
-trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True, num_samples_train=10000, num_samples_validation=2000)
+trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset,val_dataset=dataset,
+                   num_samples_train=10, num_samples_validation=2, mlm_head=True, save_checkpoint=True)
 ```
-### Example of an MLM head loaded from an MLM model trained with csv.
+### Example of an MLM head loaded from an MLM model, trained with csv.
 ```python
 base_model_name = "distilbert/distilbert-base-uncased" 
 tokenizer = AutoTokenizer.from_pretrained(base_model_name)
@@ -1368,22 +1414,41 @@ mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
 dataset = "../AMI/datasets/ami_hostility_towards_men.csv"
 trainer = ModelTrainer()
 
-trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True,validate=False, batch_size=4)
+trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, num_samples_train=50, num_samples_validation=10, num_percentage_validation=0.2, mlm_head=True)
 ```
-### Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset, but saving an MNLI head instead of the trained MLM head.
+### Example of an MLM head loaded from an MLM model, trained with a dictionary of lists.
+```python
+base_model_name = "distilbert/distilbert-base-uncased" 
+tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
+dataset_file_path = "../AMI/datasets/ami_hostility_towards_men.csv"
+df = pd.read_csv(dataset_file_path, header=None)
+text_list = df[0].tolist()
+
+dataset = {
+    "train": text_list[:80],
+    "validation": text_list[80:]
+
+}
+
+trainer = ModelTrainer()
+trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True)
+```
+### Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset, but saving the NLI head instead of the trained MLM head.
 ```python
 trainer = ModelTrainer()
-dataset = './datasets/depressive_dataset.csv'
-p="./asi_trained_models/just_nli/checkpoint-24544/"
-mlm_initialized_head = AutoModelForMaskedLM.from_pretrained("google-bert/bert-base-uncased")
+dataset = "../AMI/datasets/ami_hostility_towards_men.csv"
+nli_model_path="typeform/distilbert-base-uncased-mnli" 
+mlm_initialized_head = AutoModelForMaskedLM.from_pretrained("distilbert/distilbert-base-uncased")
 
-nli_head_to_save=AutoModelForSequenceClassification.from_pretrained(p)
+nli_head_to_save=AutoModelForSequenceClassification.from_pretrained(nli_model_path)
 
-bert_model_mlm = AutoModelForMaskedLM.from_pretrained(p)
-bert_model_tokenizer = AutoTokenizer.from_pretrained(p)
+distilbert_model_mlm = AutoModelForMaskedLM.from_pretrained(nli_model_path)
+distilbert_model_tokenizer = AutoTokenizer.from_pretrained(nli_model_path)
 
-trainer.attach_head_to_model(bert_model_mlm, nli_head_to_save, "bert") # bert_model_mlm base model is referenced to nli_head_to_save base model.
-trainer.train_head(model=bert_model_mlm, tokenizer=bert_model_tokenizer, model_to_copy_weights_from=mlm_initialized_head, copy_weights=True, mlm_head=True, dataset=dataset,val_dataset=dataset, checkpoint_path="./phq_trained_models/nli_then_mlm_domain_adaptation_depressive_saved_nli/", head_to_save=nli_head_to_save, batch_size=8, num_epochs=20)
+trainer.attach_head_to_model(distilbert_model_mlm, nli_head_to_save, "distilbert") # distilbert_model_mlm base model is referenced to nli_head_to_save base model.
+trainer.train_head(model=distilbert_model_mlm, tokenizer=distilbert_model_tokenizer, model_to_copy_weights_from=mlm_initialized_head, copy_weights=True, mlm_head=True, 
+                   dataset=dataset, val_dataset=dataset, save_checkpoint=True, checkpoint_path="./phq_trained_models/nli_then_mlm_domain_adaptation_depressive_saved_nli/", head_to_save=nli_head_to_save)
 ```
 ### Example of an MLM head loaded from an NLI model with weights and biases initialized randomly, trained with dataset.
 ```python
@@ -1392,7 +1457,28 @@ tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
 dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
 trainer = ModelTrainer()
-trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True, copy_weights=False,num_samples_train=10000, num_samples_validation=2000)
+trainer.train_head(model=mlm_model, tokenizer=tokenizer, dataset=dataset, mlm_head=True, num_samples_train=100, num_samples_validation=20, num_percentage_validation=0.2)
+```
+### Example of an MLM head loaded from an NLI model with weights and biases initialized randomly, trained with csv.
+```python
+base_model_name = "typeform/distilbert-base-uncased-mnli" 
+tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
+dataset = "../AMI/datasets/ami_hostility_towards_men.csv"
+trainer = ModelTrainer()
+
+trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset,num_samples_train=100, mlm_head=True, batch_size=4)
+```
+### Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on csv.
+```python
+base_model_name = "typeform/distilbert-base-uncased-mnli" 
+mlm_initialized_head = AutoModelForMaskedLM.from_pretrained("distilbert/distilbert-base-uncased")
+tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
+dataset = "../AMI/datasets/ami_hostility_towards_men.csv"
+trainer = ModelTrainer()
+
+trainer.train_head(model=mlm_model, tokenizer=tokenizer, dataset=dataset, mlm_head=True, num_samples_train=90, num_samples_validation=10, model_to_copy_weights_from=mlm_initialized_head, copy_weights=True, batch_size=4)
 ```
 ### Example of an MLM head loaded from an NLI model with copied weights and biases from a trained MLM head, trained on dataset.
 ```python
@@ -1403,25 +1489,54 @@ mlm_model = AutoModelForMaskedLM.from_pretrained(base_model_name)
 dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
 trainer = ModelTrainer()
 
-trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True, model_to_copy_weights_from=mlm_initialized_head, copy_weights=True,num_samples_train=10000, num_samples_validation=2000)
+trainer.train_head(model=mlm_model, tokenizer=tokenizer,dataset=dataset, mlm_head=True, model_to_copy_weights_from=mlm_initialized_head, copy_weights=True,num_samples_train=100, num_samples_validation=20, num_percentage_validation=0.2)
 ```
-### Example of an MNLI head loaded from an MNLI model trained with csv.
+### Example of an NLI head loaded from an NLI model, trained on csv.
 ```python
 base_model_name = "typeform/distilbert-base-uncased-mnli"
 tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 nli_model = AutoModelForSequenceClassification.from_pretrained(base_model_name)
-dataset = "./jsonl_to_csv.csv"
+dataset = "./test_nli.csv"
+
 trainer = ModelTrainer()
-trainer.train_head(nli_model, tokenizer, nli_head=True, dataset=dataset, num_samples_train=4000, num_samples_validation=1000)
+trainer.train_head(nli_model, tokenizer, nli_head=True, dataset=dataset, num_samples_train=100, num_samples_validation=10, num_percentage_validation=0.2, label2_id={"entailment":0, "neutral":1, "contradiction":2})
 ```
-### Example of an NLI loaded from an NLI model, trained on dataset.
+### Example of an NLI head loaded from an NLI model, trained on dataset.
 ```python
 base_model_name = "typeform/distilbert-base-uncased-mnli"
 tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 nli_model = AutoModelForSequenceClassification.from_pretrained(base_model_name)
 dataset = load_dataset('multi_nli')
+
+dataset = DatasetDict({
+    'train': dataset['train'],
+    'validation': dataset['validation_matched']
+})
+
 trainer = ModelTrainer()
-trainer.train_head(nli_model, tokenizer, nli_head=True, dataset=dataset, num_samples_train=10000, num_samples_validation=2000)
+trainer.train_head(nli_model, tokenizer, nli_head=True, dataset=dataset, num_samples_train=2000,label2_id={"entailment":0, "neutral":1, "contradiction":2})
+```
+### Example of an NLI head loaded from an NLI model, trained on a dictionary of lists.
+```python
+base_model_name = "typeform/distilbert-base-uncased-mnli"
+tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+nli_model = AutoModelForSequenceClassification.from_pretrained(base_model_name)
+dataset_file_path = "./test_nli.csv"
+
+df = pd.read_csv(dataset_file_path)
+premise_list = df['premise'].to_list()
+hypothesis_list = df['hypothesis'].to_list()
+label_list = df['label'].to_list()
+
+
+dataset = {
+    "train": {"premise":premise_list[:400],"hypothesis":hypothesis_list[:400],"label":label_list[:400]},
+    "validation": {"premise":premise_list[400:450],"hypothesis":hypothesis_list[400:450],"label":label_list[400:450]}
+
+}
+
+trainer = ModelTrainer()
+trainer.train_head(nli_model, tokenizer, nli_head=True, dataset=dataset, num_samples_train=100, num_samples_validation=10, num_percentage_validation=0.2, label2_id={"entailment":0, "neutral":1, "contradiction":2})
 ```
 ### Example of an NLI head loaded from an MLM model with weights and biases initialized randomly.
 ```python
@@ -1432,9 +1547,14 @@ nli_model = AutoModelForSequenceClassification.from_pretrained(base_model_name ,
 trainer = ModelTrainer()
 dataset = load_dataset('multi_nli')
 
-trainer.train_head(nli_model, tokenizer,dataset=dataset, nli_head=True, num_samples_train=10000, num_samples_validation=2000)
+dataset = DatasetDict({
+    'train': dataset['train'],
+    'validation': dataset['validation_matched']
+})
+
+trainer.train_head(nli_model, tokenizer,dataset=dataset, nli_head=True, num_samples_train=100, num_samples_validation=20, num_percentage_validation=0.2, label2_id={"entailment":0, "neutral":1, "contradiction":2})
 ```
-### Example of an NLI head loaded from MLM model with copied weights and biases from a trained NLI head.
+### Example of an NLI head loaded from an MLM model with copied weights and biases from a trained NLI head.
 ```python
 config = AutoConfig.from_pretrained("distilbert/distilbert-base-uncased", num_labels = 3)
 base_model_name = "distilbert/distilbert-base-uncased"
@@ -1443,7 +1563,13 @@ nli_model = AutoModelForSequenceClassification.from_pretrained(base_model_name ,
 nli_initialized_head = AutoModelForSequenceClassification.from_pretrained("typeform/distilbert-base-uncased-mnli")
 trainer = ModelTrainer()
 dataset = load_dataset('multi_nli')
-trainer.train_head(nli_model, tokenizer,dataset=dataset, nli_head=True, model_to_copy_weights_from=nli_initialized_head, num_samples_train=10000, num_samples_validation=2000, copy_weights=True)
+
+dataset = DatasetDict({
+    'train': dataset['train'],
+    'validation': dataset['validation_matched']
+})
+
+trainer.train_head(nli_model, tokenizer,dataset=dataset, nli_head=True, model_to_copy_weights_from=nli_initialized_head, num_samples_train=100, num_samples_validation=10, copy_weights=True, num_percentage_validation=0.2, label2_id={"entailment":0, "neutral":1, "contradiction":2})
 ```
 
 Shield: [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]

@@ -1,0 +1,5 @@
+MLM_TYPE = "QMLM"
+NLI_TYPE = "QMNLI"
+META_DATA_PATH = "models_meta_data.csv"
+MODELS_ERROR_PATH = "models_errors.csv"
+MODEL_IDENTIFIER = "model_version_id"

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "c:\\vs_code_projects\\cloned_repos\\qlatent_public\\qlatent\\qlatent\\hf_model_evaluator"
+    ]
+  }
+}

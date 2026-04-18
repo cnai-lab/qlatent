@@ -83,7 +83,7 @@ class QMLM(QABSTRACT):
         prob = np.prod(probs)
         return prob
     
-    def run(self, model= None):
+    def run(self, model= None, pre_text: str = None):
         super().run(model)
         tokens_to_ids_dict = {}
         str_to_tokens_dict = {}

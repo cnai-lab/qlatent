@@ -17,11 +17,41 @@ from transformers import pipeline
 import os
 from transformers.tokenization_utils import TruncationStrategy
 
-from ..qabstract.qabstract import *
-from ..qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
+from qlatent.qabstract.qabstract_torch import *
+from qlatent.qabstract.qabstract_torch import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 ## Wait for colab to upgrade to Python 3.11
 ##IDXSELECT_for_consistency_checks = Annotated[Tuple[Union[slice,Annotated[List[int], MinLen(2)]], MinLen(2)]
+
+
+def tensor_postprocess(model_outputs, entailment_id=0, framework='pt', multi_label=False):
+    candidate_labels = [outputs["candidate_label"] for outputs in model_outputs]
+    sequences = [outputs["sequence"] for outputs in model_outputs]
+    # Concatenate logits while preserving tensors
+    if framework == "pt":
+        logits = torch.cat([output["logits"].float() for output in model_outputs], dim=0)
+    else:
+        raise ValueError("Unsupported framework. Only 'pt' (PyTorch) is supported.")
+
+    N = logits.shape[0]
+    n = len(candidate_labels)
+    num_sequences = N // n
+    reshaped_outputs = logits.view(num_sequences, n, -1)
+
+    if multi_label or len(candidate_labels) == 1:
+        contradiction_id = -1 if entailment_id == 0 else 0
+        entail_contr_logits = reshaped_outputs[..., [contradiction_id, entailment_id]]
+        scores = torch.softmax(entail_contr_logits, dim=-1)[..., 1]
+    else:
+        entail_logits = reshaped_outputs[..., entailment_id]
+        scores = torch.softmax(entail_logits, dim=-1)
+
+    top_inds = torch.argsort(scores[0], descending=True)
+    return {
+        "sequence": sequences[0],
+        "labels": [candidate_labels[i] for i in top_inds],
+        "scores": scores[0][top_inds],
+    }
 
 
 class QMNLI(QABSTRACT):
@@ -54,14 +84,18 @@ class QMNLI(QABSTRACT):
         QMNLI._qregister[self.__class__.__name__]=self
         
 
-    def run(self, model=None, pre_text: str = None):
+    def run(self, model=None):
+#         print("QMNLI RUN 1")
         super().run(model)
+#         print("QMNLI RUN 2")
         if self.model.entailment_id == -1:
             raise Exception("""The entailment id of the MNLI model is not determine.  please update label name to {"CONTRADICTION", "ENTAILMENT", "NEUTRAL"} in self.model.config""")
+        
         T = time.time()
         coo = []
         p = []      
-
+        p_torch = torch.empty(0)
+        p_torch_list = []
         ## prepare all premise hypothesis pairs
         sequences = []
         for kmap,kcoo in zip(self._keywords_map,self._keywords_grid_idx):
@@ -90,17 +124,28 @@ class QMNLI(QABSTRACT):
                 "sequence": context,
             }
             p.append(self.model.postprocess([output], multi_label=False)['scores'][0])
-
         
         coo = torch.stack(coo).T
         assert torch.all(torch.eq(coo.T, self._keywords_grid_idx))
-        
         self._pdf["P"] = p
+
+        ## Apply softmax on logits for torch version
+        for res, (context, answer) in zip(results.logits, sequences):  
+            output = {
+                'logits': res.cpu().view(1, -1).clone().requires_grad_(), # Use requires_grad_() to track gradients
+                "candidate_label": answer,
+                "sequence": context,
+            }
+            # Instead of passing to postprocess, you might want to use torch.softmax or any other operation
+            scores = tensor_postprocess([output], entailment_id = self.model.entailment_id, framework = self.model.framework, multi_label=False)['scores']
+            p_torch_list.append(scores[0]) 
+
+        p_torch = torch.stack(p_torch_list)
+        self._t = p_torch
         
         self._T = time.time() - T
         self.result = self
         return self.result
-
     
 # The static property QMNLI._qregister will contain one instance (the last one) of every subtype of QMNLI.
 # This will allow to automatically registering questions and reusing them with various models when the time comes.

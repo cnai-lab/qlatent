@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/vs_code_projects/cloned_repos/qlatent/qlatent-dev/**)",
+      "Bash(xargs grep:*)",
+      "Bash(ls -lah /c/vs_code_projects/cloned_repos/qlatent/qlatent-dev/code/experiments/*.ipynb)"
+    ]
+  }
+}
