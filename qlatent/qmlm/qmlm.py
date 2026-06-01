@@ -119,7 +119,7 @@ class QMLM(QABSTRACT):
         assert torch.all(torch.eq(coo.T, self._keywords_grid_idx))
 
         self._pdf["P"] = p
-        
+        self._t = torch.tensor(p, device=self.model.device)
         self._T = time.time() - T
         self.result = self
         return self.result

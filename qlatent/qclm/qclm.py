@@ -22,8 +22,8 @@ import pingouin as pg
 import contextlib
 import string
 
-from qlatent.qabstract.qabstract_torch import *
-from qlatent.qabstract.qabstract_torch import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
+from qlatent.qabstract.qabstract import *
+from qlatent.qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 from typing import Dict
 

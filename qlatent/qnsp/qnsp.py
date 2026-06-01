@@ -1,7 +1,6 @@
 import torch
 import pandas as pd
 import numpy as np
-import torch
 import time
 from pprint import pprint
 from transformers import AutoModelForMaskedLM, AutoTokenizer
@@ -11,11 +10,11 @@ from transformers import PreTrainedTokenizer
 import scipy
 import sklearn as sk
 import itertools
-from ..qabstract.qabstract import *
-from ..qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
+
+from qlatent.qabstract.qabstract import *
+from qlatent.qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 from transformers import BertTokenizer, BertForNextSentencePrediction
-import torch
 
 
 class NextSentencePredictionPipeline():
@@ -23,17 +22,15 @@ class NextSentencePredictionPipeline():
     self.tokenizer = BertTokenizer.from_pretrained(model_name)
     self.model = BertForNextSentencePrediction.from_pretrained(model_name, return_dict=True)
     self.model.to(device)
+    self.device = device
 
   def __call__(self, sentence_pairs, device=0):
     results = []
-#     print(sentence_pairs)
-#     for prompt, next_sentence in sentence_pairs:
     prompt = sentence_pairs[0]
     next_sentence = sentence_pairs[1]
     encoding = self.tokenizer(prompt, next_sentence, return_tensors='pt').to(device)
     next_sentence_label = torch.LongTensor([1]).to(device)
     outputs = self.model(**encoding, labels=next_sentence_label)
-#     outputs = self.model(**encoding, next_sentence_label=torch.LongTensor([1]))
     logits = outputs.logits
     results.append(logits)
     return torch.vstack(results).detach()
@@ -51,7 +48,6 @@ class QNSP(QABSTRACT):
                  scale='intensifier',
                  descriptor = {}):
         super().__init__(dimensions, model, p, index, scale, descriptor)
-#         self.nsp = model
         self._next_sentence = next_sentence
         self._prompt = prompt
         self._descriptor['query'] = prompt+"->"+next_sentence
@@ -60,7 +56,7 @@ class QNSP(QABSTRACT):
     def ans_logits(self, result):
         return torch.nn.functional.softmax(result, dim=1)[:,0]
 
-    def run(self, model=None):
+    def run(self, model=None, pre_text: str = None):
         super().run(model)
         T = time.time()
         coo = []
@@ -77,10 +73,9 @@ class QNSP(QABSTRACT):
         assert torch.all(torch.eq(coo.T, self._keywords_grid_idx))
 
         self._pdf["P"] = p
-#         print(self._pdf)
+        self._t = torch.tensor(p)
         self._T = time.time() - T
         self.result = self
-#         print(self.result)
         return self.result
 
 

@@ -11,8 +11,8 @@ import scipy
 import sklearn as sk
 import itertools
 
-from ..qabstract.qabstract import *
-from ..qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
+from qlatent.qabstract.qabstract import *
+from qlatent.qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 
 class QCOLA(QABSTRACT):
@@ -40,7 +40,7 @@ class QCOLA(QABSTRACT):
         QCOLA._qregister[self.__class__.__name__] = self
 
         
-    def run(self, model= None):
+    def run(self, model=None, pre_text: str = None):
         super().run(model)
         T = time.time()
         coo = []
@@ -55,7 +55,7 @@ class QCOLA(QABSTRACT):
         assert torch.all(torch.eq(coo.T, self._keywords_grid_idx))
 
         self._pdf["P"] = p
-        
+        self._t = torch.tensor(p, device=self.model.device)
         self._T = time.time() - T
         self.result = self
         return self.result

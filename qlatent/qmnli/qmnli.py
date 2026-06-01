@@ -17,11 +17,8 @@ from transformers import pipeline
 import os
 from transformers.tokenization_utils import TruncationStrategy
 
-from qlatent.qabstract.qabstract_torch import *
-from qlatent.qabstract.qabstract_torch import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
-
-## Wait for colab to upgrade to Python 3.11
-##IDXSELECT_for_consistency_checks = Annotated[Tuple[Union[slice,Annotated[List[int], MinLen(2)]], MinLen(2)]
+from qlatent.qabstract.qabstract import *
+from qlatent.qabstract.qabstract import SCALE, DIMENSIONS, FILTER, IDXSELECT, _filter_data_frame
 
 
 class QMNLI(QABSTRACT):
