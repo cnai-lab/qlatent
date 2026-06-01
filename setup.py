@@ -1,6 +1,5 @@
 from setuptools import setup, find_packages
 from pathlib import Path
-from pkg_resources import parse_requirements
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8-sig")
