@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 from pathlib import Path
+from pkg_resources import parse_requirements
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8-sig")
@@ -31,4 +32,5 @@ setup(
     ],
     long_description=long_description,
     long_description_content_type='text/markdown',
+    data_files=[('Academic Article', ['2409.19655v1.pdf'])],
 )
