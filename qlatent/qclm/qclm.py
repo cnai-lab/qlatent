@@ -179,6 +179,21 @@ class QCLM(QABSTRACT):
                 #    This fills in the non-scale dimension's value if it
                 #    appears before the last placeholder.
                 prefix_text = template_prefix.format_map(keyword_map)
+
+                if mode == "chat":
+                    messages = [{"role": "user", "content": prefix_text.rstrip()}]
+                    prefix_text = self.model.tokenizer.apply_chat_template(
+                        messages, tokenize=False, add_generation_prompt=True
+                    )
+                elif mode == "chat_with_preamble":
+                    messages = [{"role": "user", "content": prefix_text.rstrip()}]
+                    prefix_text = self.model.tokenizer.apply_chat_template(
+                        messages, tokenize=False, add_generation_prompt=True
+                    )
+                    prefix_text = prefix_text + "My answer is "
+
+                # else: mode == "raw" → no change
+
                 if pre_text is not None:
                     prefix_text = pre_text + "\n" + prefix_text
 
