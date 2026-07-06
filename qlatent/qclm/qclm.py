@@ -104,6 +104,39 @@ def _parse_template_last_placeholder(template: str, dimensions: dict) -> Tuple[s
     return last_name, template_prefix
 
 
+def has_chat_template(tokenizer):
+    return bool(getattr(tokenizer, "chat_template", None))
+
+
+def apply_chat_template_or_raw(tokenizer, raw_text, debug=False):
+    """
+    If tokenizer has a chat template, apply it.
+    If not, return raw_text EXACTLY unchanged.
+    """
+    if not has_chat_template(tokenizer):
+        if debug:
+            print("[QCLM] No chat_template. Falling back to exact raw prompt.")
+        return raw_text, "raw"
+
+    messages = [{"role": "user", "content": raw_text.rstrip()}]
+
+    try:
+        chat_text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        return chat_text, "chat"
+
+    except ValueError as e:
+        if "chat_template is not set" in str(e):
+            if debug:
+                print("[QCLM] chat_template error. Falling back to exact raw prompt.")
+            return raw_text, "raw"
+
+        raise
+
+
 class QCLM(QABSTRACT):
     """
     Query-based Causal Language Model for measuring psychological constructs.
@@ -180,19 +213,31 @@ class QCLM(QABSTRACT):
                 #    appears before the last placeholder.
                 prefix_text = template_prefix.format_map(keyword_map)
 
-                if mode == "chat":
-                    messages = [{"role": "user", "content": prefix_text.rstrip()}]
-                    prefix_text = self.model.tokenizer.apply_chat_template(
-                        messages, tokenize=False, add_generation_prompt=True
+                if mode == "raw":
+                    effective_mode = "raw"
+                
+                elif mode == "chat":
+                    prefix_text, effective_mode = apply_chat_template_or_raw(
+                        self.model.tokenizer,
+                        prefix_text,
+                        debug=debug,
                     )
+                
                 elif mode == "chat_with_preamble":
-                    messages = [{"role": "user", "content": prefix_text.rstrip()}]
-                    prefix_text = self.model.tokenizer.apply_chat_template(
-                        messages, tokenize=False, add_generation_prompt=True
+                    prefix_text, effective_mode = apply_chat_template_or_raw(
+                        self.model.tokenizer,
+                        prefix_text,
+                        debug=debug,
                     )
-                    prefix_text = prefix_text + "My answer is "
-
-                # else: mode == "raw" → no change
+                
+                    # Only add this if chat template actually worked.
+                    # Otherwise fallback should be exactly raw.
+                    if effective_mode == "chat":
+                        prefix_text = prefix_text + "My answer is "
+                        effective_mode = "chat_with_preamble"
+                
+                else:
+                    raise ValueError(f"Unknown mode: {mode}")
 
                 if pre_text is not None:
                     prefix_text = pre_text + "\n" + prefix_text
