@@ -163,7 +163,7 @@ class QCLM(QABSTRACT):
         QCLM._qregister[self.__class__.__name__] = self
 
     def run(self, model=None, pre_text: str = None, training: bool = False,
-            scoring: str = 'geometric_mean', debug: bool = False) -> 'QCLM':
+            scoring: str = 'geometric_mean', debug: bool = False, mode='raw') -> 'QCLM':
         """
         Execute the evaluation or training pass across all keyword combinations.
 

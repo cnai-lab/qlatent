@@ -5,7 +5,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8-sig")
 setup(
     name="qlatent",
-    version="1.0.26",
+    version="1.0.27",
     description="A Python package for running psychometric on LLMs.",
     packages=find_packages(),
     classifiers=[
